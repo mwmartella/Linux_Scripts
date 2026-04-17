@@ -1,12 +1,19 @@
 # Field Manager - Desktop Launcher Setup
 
 ## Install Python dependencies (run once)
+
+### Create a virtual environment and install packages:
 ```bash
-pip3 install -r ~/Documents/Linux_Scripts/requirements.txt
+cd ~/Documents/Linux_Scripts
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
 ```
-If you get a permission error:
+
+If `python3 -m venv` fails, install the venv package first:
 ```bash
-pip3 install --user -r ~/Documents/Linux_Scripts/requirements.txt
+sudo apt install python3-venv
 ```
 
 ---
