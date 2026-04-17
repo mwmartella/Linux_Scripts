@@ -37,7 +37,7 @@ def RowJob():
     back_kwargs = dict(font=BTN_FONT, size=(12, 1), pad=BTN_PAD, button_color=('white', 'firebrick3'), border_width=2)
 
     #Start Up Database engines....... Vroom
-    with open('ACTIVITYLOG.json', 'r') as json_file:
+    with open('/home/super1/OneDrive/~FARM DATA/Timesheet App/ACTIVITYLOG.json', 'r') as json_file:
         data = json.load(json_file)
 
     def find_block(data, field, variety):
