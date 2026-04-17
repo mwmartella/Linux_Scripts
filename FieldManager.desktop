@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Field Manager
+Comment=MWSS Field Manager - SantaRita Orchards
+Exec=sh -c '/home/super1/Documents/Linux_Scripts/run_field_manager.sh >> "/home/super1/Documents/Linux_Scripts/field_manager.log" 2>&1'
+Path=/home/super1/Documents/Linux_Scripts
+Terminal=false
+Icon=utilities-terminal
+Categories=Office;
+
