@@ -60,12 +60,12 @@ def RowJob():
     ####################################################################################################################################################################################################################################
     FieldList = list({block["Field"] for block in data['BlockDict'].values() if "Field" in block})
     VarietyList = list({block["Variety"] for block in data['BlockDict'].values() if "Variety" in block})
-    BlockDataFrame = pd.read_excel('BlockData\\BLOCKDATA.xlsx')
-    SuperDataFrame = pd.read_excel('Worker Data\\SUPERVISORS.xlsx')
-    CasualDataFrame = pd.read_excel('Worker Data\\CASUAL STAFF.xlsx')
+    BlockDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/BlockData/BLOCKDATA.xlsx')
+    SuperDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SUPERVISORS.xlsx')
+    CasualDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/CASUAL STAFF.xlsx')
     print(CasualDataFrame)
-    MachinesDataFrame = pd.read_excel('Worker Data\\MACHINES.xlsx')
-    VarietyDataFrame = pd.read_excel('BlockData\\VARIETY.xlsx')
+    MachinesDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/MACHINES.xlsx')
+    VarietyDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/BlockData/VARIETY.xlsx')
     VarietyList = VarietyDataFrame['VARIETY'].tolist()
     QACHECKLIST = ['All Good', 'Missed Work - Sent Back', 'Work Too Heavy', 'Work Too Light', 'Worker Issues - Distracted', 
                    'Worker Issues - Attitude', 'Worker Issues - Other']
