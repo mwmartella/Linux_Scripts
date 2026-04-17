@@ -35,10 +35,10 @@ def TimeLog():
     sql_connect2 = sqlite3.connect('TimeSheetGlobal.db')
     cursor2 = sql_connect.cursor()
     #Compile DataFrames
-    SuperDataFrame = pd.read_excel('Worker Data\\SUPERVISORS.xlsx')
-    CasualDataFrame = pd.read_excel('Worker Data\\CASUAL STAFF.xlsx')
-    MachineDataFrame = pd.read_excel('Worker Data\\MACHINES.xlsx')
-    RatesDataFrame = pd.read_excel('Worker Data\\PAYRATES.xlsx')
+    SuperDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SUPERVISORS.xlsx')
+    CasualDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/CASUAL STAFF.xlsx')
+    MachineDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/MACHINES.xlsx')
+    RatesDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/PAYRATES.xlsx')
     #Global Variable, Lists and Dicts
     #JobTypeList = ['Picking', 'Pruning', 'Thinning', 'Establish Planting', 'Tree Training', 'Packing', 'Irrigation Maintinance']
     #JobTypeDict = {'Picking': 'PK', 'Pruning': 'PR', 'Thinning': 'TH', 'Establish Planting': 'EP', 'Tree Training': 'TT', 'Packing': 'PA', 'Irrigation Maintinance': 'IM'}
