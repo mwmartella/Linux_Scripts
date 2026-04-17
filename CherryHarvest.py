@@ -9,6 +9,30 @@ import RowJob
 import re
 import platform
 
+sg.theme('DarkBlue3')
+TITLE_FONT = ("Sans", 20, "bold")
+HEADER_FONT = ("Sans", 16, "bold")
+BODY_FONT = ("Sans", 11, "bold")
+BTN_FONT = ("Sans", 14, "bold")
+BTN_SIZE = (22, 2)
+BTN_PAD = (8, 5)
+COMBO_FONT = ("Sans", 14, "bold")
+COMBO_SIZE = 35
+TABLE_FONT = ("Sans", 12, "bold")
+WARN_FONT = ("Sans", 22, "bold")
+INPUT_FONT = ("Sans", 14, "bold")
+
+def _make_window(layoutA, title='Cherry Harvest Manager'):
+    layout = [[sg.VPush()],
+              [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
+              [sg.VPush()]]
+    win = sg.Window(title, layout, finalize=True, resizable=True)
+    win.Maximize()
+    return win
+
+btn_kwargs = dict(font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD, border_width=2)
+back_kwargs = dict(font=BTN_FONT, size=(12, 1), pad=BTN_PAD, button_color=('white', 'firebrick3'), border_width=2)
+
 def CherryHarvest():
     CompName = platform.node()
     print(CompName)
@@ -58,17 +82,18 @@ def CherryHarvest():
             headers2 = {'Worker':[], 'QA':[]}
             headings2 = list(headers2)
             values2 = QALOGFRAME.values.tolist()
-            layoutB = [  [sg.Text('Cherry Crate Logger', font=("", 25, "bold"))],
-                    [sg.pin(sg.Table(values = values, headings = headings, col_widths=[60,60], font=("", 15, "bold"))), sg.pin(sg.Table(values = values2, headings = headings2, col_widths=[60,60], font=("", 15, "bold")))],
-                    [sg.Text('Select Worker', font=("", 15, "bold"))],
-                    [sg.Combo(TotalWorkerList, default_value = 'Worker', size = 50, key = 'W', font=("", 15, "bold"))],
-                    [sg.Text('Type Crate ID', font=("", 20, "bold"))],
-                    [sg.InputText(key='CrateNum', font=("", 20, "bold"))],
-                    [sg.Text('Select QA', font=("", 20, "bold"))],
-                    [sg.Combo(QACHECKLIST, default_value = 'QA', size = 50, key = 'QA', font=("", 20, "bold"))],
-                    [sg.Button('LOG', font=("", 25, "bold"))], [sg.Button('Quit', font=("", 25, "bold"))]]
-            window = sg.Window('Crate Logger', layoutB).Finalize()
-            window.Maximize()
+            layoutB = [ [sg.Text('Cherry Crate Logger', font=TITLE_FONT)],
+                    [sg.pin(sg.Table(values=values, headings=headings, col_widths=[30,30], font=TABLE_FONT)),
+                     sg.pin(sg.Table(values=values2, headings=headings2, col_widths=[30,30], font=TABLE_FONT))],
+                    [sg.Text('Select Worker', font=BODY_FONT)],
+                    [sg.Combo(TotalWorkerList, default_value='Worker', size=COMBO_SIZE, key='W', font=COMBO_FONT)],
+                    [sg.Text('Type Crate ID', font=HEADER_FONT)],
+                    [sg.InputText(key='CrateNum', font=INPUT_FONT)],
+                    [sg.Text('Select QA', font=HEADER_FONT)],
+                    [sg.Combo(QACHECKLIST, default_value='QA', size=COMBO_SIZE, key='QA', font=COMBO_FONT)],
+                    [sg.Button('LOG', **btn_kwargs)],
+                    [sg.Button('Quit', **back_kwargs)]]
+            window = _make_window(layoutB, 'Crate Logger')
             event, values = window.read()
             if event == 'Quit':
                 window.close()
@@ -81,19 +106,17 @@ def CherryHarvest():
                 try:
                     Crate = int(Crate)
                 except ValueError:
-                    layoutB = [  [sg.Text('INVALID CRATE NUMBER', font=("", 50, "bold"))],
-                               [sg.Button('BACK', font=("", 50, "bold"))]]
-                    window = sg.Window('Crate Logger', layoutB).Finalize()
-                    window.Maximize()
+                    layoutB = [ [sg.Text('INVALID CRATE NUMBER', font=WARN_FONT)],
+                               [sg.Button('BACK', **btn_kwargs)]]
+                    window = _make_window(layoutB, 'Crate Logger')
                     event, values = window.read()
                     if event == 'BACK':
                         window.close()
                     continue
                 if Crate < 0 or Crate > 480:
-                    layoutB = [  [sg.Text('INVALID CRATE NUMBER', font=("", 50, "bold"))],
-                               [sg.Button('BACK', font=("", 50, "bold"))]]
-                    window = sg.Window('Crate Logger', layoutB).Finalize()
-                    window.Maximize()
+                    layoutB = [ [sg.Text('INVALID CRATE NUMBER', font=WARN_FONT)],
+                               [sg.Button('BACK', **btn_kwargs)]]
+                    window = _make_window(layoutB, 'Crate Logger')
                     event, values = window.read()
                     if event == 'BACK':
                         window.close()
@@ -105,10 +128,9 @@ def CherryHarvest():
                     print(Crate_Input_Double_Test)
                     Crate_Input_Double_Test = Crate_Input_Double_Test['Time'].tolist()
                     Crate_Input_Double_Test = Crate_Input_Double_Test[0]
-                    layoutB = [  [sg.Text('CRATE ALREADY LOGGED', font=("", 50, "bold"))],
-                               [sg.Button('BACK', font=("", 50, "bold"))]]
-                    window = sg.Window('Crate Logger', layoutB).Finalize()
-                    window.Maximize()
+                    layoutB = [ [sg.Text('CRATE ALREADY LOGGED', font=WARN_FONT)],
+                               [sg.Button('BACK', **btn_kwargs)]]
+                    window = _make_window(layoutB, 'Crate Logger')
                     event, values = window.read()
                     if event == 'BACK':
                         window.close()
@@ -123,11 +145,13 @@ def CherryHarvest():
                 CrateLogDF = pd.DataFrame(columns=['Time', 'Worker', 'Crate', 'QA'])
                 CrateLogDF.loc[len(CrateLogDF)] = DataList
                 CrateLogDF.to_sql('Crates', con=engine, if_exists='append', index=False)
-    layoutB = [  [sg.Text('Cherry Harvest Manager', font=("", 25, "bold"))],
-                [sg.Button('Crate Log', font=("", 50, "bold"))], [sg.Button('Assign Row', font=("", 50, "bold"))],
-                [sg.Button('Cancel', font=("", 50, "bold"))]]
-    window = sg.Window('Cherry Harvest Manager', layoutB).Finalize()
-    window.Maximize()
+
+    layoutB = [ [sg.Text('Cherry Harvest Manager', font=TITLE_FONT)],
+                [sg.Button('Crate Log', **btn_kwargs)],
+                [sg.Button('Assign Row', **btn_kwargs)],
+                [sg.VPush()],
+                [sg.Button('Cancel', **back_kwargs)]]
+    window = _make_window(layoutB)
     event, values = window.read()
     if event == 'Assign Row':
         window.close()
@@ -135,5 +159,3 @@ def CherryHarvest():
     elif event == 'Crate Log':
         window.close()
         CrateLog()
-
-

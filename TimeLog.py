@@ -14,6 +14,20 @@ import datetime
 import sys
 import textwrap
 import platform
+
+sg.theme('DarkBlue3')
+TITLE_FONT = ("Sans", 20, "bold")
+HEADER_FONT = ("Sans", 16, "bold")
+BODY_FONT = ("Sans", 11, "bold")
+BTN_FONT = ("Sans", 14, "bold")
+BTN_SIZE = (22, 2)
+BTN_PAD = (8, 5)
+COMBO_FONT = ("Sans", 14, "bold")
+COMBO_SIZE = 35
+TABLE_FONT = ("Sans", 12, "bold")
+DISCLAIMER_FONT = ("Sans", 9, "bold")
+WARN_FONT = ("Sans", 22, "bold")
+
 #Start Up Database engines....... Vroom
 CompName = platform.node()
 print(CompName)
@@ -46,16 +60,28 @@ def TimeLog():
     #BlockDict = {"B2": "S-SHED PL", "B3": "S-SHED SD", "B4": "S-SHED Gala", "C2": "Pink Belle", "D3": "STK GS", "D4": "STK LIR", "E1": "Rob Bravo", "F1": "Cherry Bravo", "H2": "GSPL GS", "H3": "GSPL PL", "I1": "Total PL", "J1": "Modi", "N2": "Rainier", "N3": "Van", "N5": "Lapin", "N6": "Chelan", "N7": "Merchant", "Q1": "DWF PL", "Q2": "DWF GS", "R1": "LIR18", "S1": "LIR19", "WC2": "BGGS - Bravo", "WC3": "BGGS - GS", "WC4": "BGGS - Gala", "WD2": "WPL - PL", "WD3": "WPL - GS"}
     WorkerClass = 0
     CasualStaffList = CasualDataFrame['Worker Name'].tolist()
-    Disclaimer1 = """FIT FOR WORK - For my own safety and the safety of others, I agree to present fit for work, not under the influence of alcohol or illicit or illegal drugs. I will not consume/use alcohol, illicit or illegal drugs whilst at work. If I am using prescription or over the counter medication that I have been advised by my GP/Chemist, or it is noted on the medication packaging “not to operate machinery or potential to cause effect to operating impairment/ judgement” or in Safety Sensitive Roles and Positions or if I am in any doubt, I will inform my Supervisor immediately."""
+    Disclaimer1 = """FIT FOR WORK - For my own safety and the safety of others, I agree to present fit for work, not under the influence of alcohol or illicit or illegal drugs. I will not consume/use alcohol, illicit or illegal drugs whilst at work. If I am using prescription or over the counter medication that I have been advised by my GP/Chemist, or it is noted on the medication packaging "not to operate machinery or potential to cause effect to operating impairment/ judgement" or in Safety Sensitive Roles and Positions or if I am in any doubt, I will inform my Supervisor immediately."""
     Disclaimer2 = """FATIGUE - I agree to notify my Supervisor immediately if I am or believe that I am suffering fatigue through Lack of sleep, Illness, Personal Issues or other reasons."""
     Disclaimer3 = """SWMS - I have access to and have read and understand the task specific section in the Safe Work Method Statement (SWMS) for the job/s that I will be undertaking and I agree to work within these guidelines. If I am unable to work within these guidelines, I will contact my Supervisor immediately for instructions."""
     Disclaimer4 = "BY SIGNING IN FOR WORK YOU ARE DECLARING THE ABOVE STATEMENTS"
-    Disclaimer1 = textwrap.fill(Disclaimer1, 80)
-    Disclaimer2 = textwrap.fill(Disclaimer2, 80)
-    Disclaimer3 = textwrap.fill(Disclaimer3, 80)
-    Disclaimer4 = textwrap.fill(Disclaimer4, 80)
+    Disclaimer1 = textwrap.fill(Disclaimer1, 90)
+    Disclaimer2 = textwrap.fill(Disclaimer2, 90)
+    Disclaimer3 = textwrap.fill(Disclaimer3, 90)
+    Disclaimer4 = textwrap.fill(Disclaimer4, 90)
     Block = 0
     Activity = 0
+
+    def _make_window(layoutA, title='Time and Labour'):
+        layout = [[sg.VPush()],
+                  [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
+                  [sg.VPush()]]
+        win = sg.Window(title, layout, finalize=True, resizable=True)
+        win.Maximize()
+        return win
+
+    btn_kwargs = dict(font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD, border_width=2)
+    back_kwargs = dict(font=BTN_FONT, size=(12, 1), pad=BTN_PAD, button_color=('white', 'firebrick3'), border_width=2)
+
     #Define Functions for Repetative Tasks
     def SignalChecker(WorkerName):
         global SignalCalc
@@ -63,56 +89,54 @@ def TimeLog():
         WorkerStatusDataFrame = pd.DataFrame(WorkerStatusChecker, columns=['Signal'])
         SignalCalc = WorkerStatusDataFrame['Signal'].sum()
         print(SignalCalc)
+
     def WorkerLogIN(WorkerName):
         global event
         global values
         global Block
         global Activity
         if WorkerClass == 'SUPER':
-            layoutA = [  [sg.Text(WorkerName, font=("", 25, "bold"))],
-                        [sg.Text('PLEASE READ THE FOLLOWING', font=("", 30, "bold"))],
-                        [sg.Text(Disclaimer1, font=("", 15, "bold"))],
-                        [sg.Text(Disclaimer2, font=("", 15, "bold"))],
-                        [sg.Text(Disclaimer3, font=("", 15, "bold"))],
-                        [sg.Text(Disclaimer4, font=("", 15, "bold"))],
-                        [sg.Button('Sign On', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-            layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-            window = sg.Window('Time and Labour', layout).Finalize()
-            window.Maximize()
+            layoutA = [ [sg.Text(WorkerName, font=TITLE_FONT)],
+                        [sg.Text('PLEASE READ THE FOLLOWING', font=HEADER_FONT)],
+                        [sg.Text(Disclaimer1, font=DISCLAIMER_FONT)],
+                        [sg.Text(Disclaimer2, font=DISCLAIMER_FONT)],
+                        [sg.Text(Disclaimer3, font=DISCLAIMER_FONT)],
+                        [sg.Text(Disclaimer4, font=DISCLAIMER_FONT)],
+                        [sg.Button('Sign On', **btn_kwargs)],
+                        [sg.Button('Back', **back_kwargs)]]
+            window = _make_window(layoutA)
             event, values = window.read()
 
         if WorkerClass == 'CASUAL':
             SignalChecker(WorkerName)
             if int(SignalCalc) != 0 or SignalCalc == None:
-                layoutA = [  [sg.Text(WorkerName, font=("", 25, "bold"))],
-                        [sg.Text('WORKER ALREADY SIGNED IN', font=("", 50, "bold"))],
-                        [sg.Button('Ok', font=("", 35, "bold"))]]
-                layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-                window = sg.Window('Time and Labour', layout).Finalize()
-                window.Maximize()
+                layoutA = [ [sg.Text(WorkerName, font=TITLE_FONT)],
+                        [sg.Text('WORKER ALREADY SIGNED IN', font=WARN_FONT)],
+                        [sg.Button('Ok', **btn_kwargs)]]
+                window = _make_window(layoutA)
                 event, values = window.read()
                 if event == 'Ok':
                     window.close()
             else:
-                layoutA = [  [sg.Text(WorkerName, font=("", 25, "bold"))],
-                            [sg.Text('PLEASE READ THE FOLLOWING', font=("", 50, "bold"))],
-                            [sg.Text(Disclaimer1, font=("", 15, "bold"))],
-                            [sg.Text(Disclaimer2, font=("", 15, "bold"))],
-                            [sg.Text(Disclaimer3, font=("", 15, "bold"))],
-                            [sg.Text(Disclaimer4, font=("", 15, "bold"))],
-                            [sg.Button('Sign On', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-                layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-                window = sg.Window('Time and Labour', layout).Finalize()
-                window.Maximize()
+                layoutA = [ [sg.Text(WorkerName, font=TITLE_FONT)],
+                            [sg.Text('PLEASE READ THE FOLLOWING', font=HEADER_FONT)],
+                            [sg.Text(Disclaimer1, font=DISCLAIMER_FONT)],
+                            [sg.Text(Disclaimer2, font=DISCLAIMER_FONT)],
+                            [sg.Text(Disclaimer3, font=DISCLAIMER_FONT)],
+                            [sg.Text(Disclaimer4, font=DISCLAIMER_FONT)],
+                            [sg.Button('Sign On', **btn_kwargs)],
+                            [sg.Button('Back', **back_kwargs)]]
+                window = _make_window(layoutA)
                 event, values = window.read()
+
         if WorkerClass == 'MACHINE':
-            layoutA = [  [sg.Text(WorkerName, font=("", 25, "bold"))],
-                        [sg.Text('Please Select Block and Job Type', font=("", 50, "bold"))],
-                        [sg.Button('Sign On', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-            layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-            window = sg.Window('Time and Labour', layout).Finalize()
-            window.Maximize()
+            layoutA = [ [sg.Text(WorkerName, font=TITLE_FONT)],
+                        [sg.Text('Please Select Block and Job Type', font=HEADER_FONT)],
+                        [sg.Button('Sign On', **btn_kwargs)],
+                        [sg.Button('Back', **back_kwargs)]]
+            window = _make_window(layoutA)
             event, values = window.read()
+
         if event == 'Sign On':
             window.close()
             if WorkerClass == 'SUPER':
@@ -136,15 +160,15 @@ def TimeLog():
             EventDataFrame.to_sql('WorkerTimeLog', con=engine, if_exists='append', index=False)
         if event == 'Back':
             window.close()
+
     def WorkerLogOUT(WorkerName):
         global event
         global values
-        layoutA = [  [sg.Text(WorkerName, font=("", 25, "bold"))],
-                    [sg.Text('WORKER LOGGED IN', font=("", 30, "bold"))],
-                    [sg.Button('Sign OFF', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-        layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-        window = sg.Window('Time and Labour', layout).Finalize()
-        window.Maximize()
+        layoutA = [ [sg.Text(WorkerName, font=TITLE_FONT)],
+                    [sg.Text('WORKER LOGGED IN', font=HEADER_FONT)],
+                    [sg.Button('Sign OFF', **btn_kwargs)],
+                    [sg.Button('Back', **back_kwargs)]]
+        window = _make_window(layoutA)
         event, values = window.read()
         if event == 'Sign OFF':
             if WorkerClass == 'SUPER':
@@ -165,36 +189,34 @@ def TimeLog():
             EventList = [WorkerName, WorkerCode, Action, TimeStamp, Signal]
             EventDataFrame = pd.DataFrame(columns=['WorkerName', 'WorkerCode', 'Action', 'TimeStamp', 'Signal'])
             EventDataFrame.loc[len(EventDataFrame)] = EventList
-            EventDataFrame.to_sql('WorkerTimeLog', con=engine, if_exists='append', index=False)#########################################################
+            EventDataFrame.to_sql('WorkerTimeLog', con=engine, if_exists='append', index=False)
         if event == 'Back':
             window.close()
+
     #Open First Window
     Signal = 0
     while Signal < 1:
-        layoutA = [  [sg.Text('Welcome To SantaRita Orchards Time and Labour App', font=("", 25, "bold"))],
-                            [sg.Text('Please Select Worker Type', font=("", 50, "bold"))],
-                            [sg.Button('Casual Staff', font=("", 25, "bold"))],
-                            [sg.Button('Machine', font=("", 25, "bold"))],
-                            [sg.Button('Status Report', font=("", 25, "bold"))],
-                            [sg.Button('Close Day', font=("", 25, "bold"))],
-                            [sg.Button('Role Call', font=("", 25, "bold"))],
-                            [sg.Button('Back', font=("", 25, "bold"))]]
-        layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-        window = sg.Window('Time and Labour', layout).Finalize()
-        window.Maximize()
+        layoutA = [ [sg.Text('Welcome To SantaRita Orchards', font=TITLE_FONT)],
+                    [sg.Text('Please Select Worker Type', font=HEADER_FONT)],
+                    [sg.Button('Casual Staff', **btn_kwargs)],
+                    [sg.Button('Machine', **btn_kwargs)],
+                    [sg.Button('Status Report', **btn_kwargs)],
+                    [sg.Button('Close Day', **btn_kwargs)],
+                    [sg.Button('Role Call', **btn_kwargs)],
+                    [sg.VPush()],
+                    [sg.Button('Back', **back_kwargs)]]
+        window = _make_window(layoutA)
         event, values = window.read()
 
         if event == 'Supervisor':
             window.close()
             WorkerClass = 'SUPER'
-            layoutA = [  [sg.Text('Supervisor', font=("", 25, "bold"))],
-                            [sg.Text('Please Select Worker', font=("", 50, "bold"))],
-                            [sg.Button('AlexR', font=("", 25, "bold"))],
-                            [sg.Button('Shaun', font=("", 25, "bold"))],
-                            [sg.Button('Back', font=("", 25, "bold"))]]
-            layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-            window = sg.Window('Time and Labour', layout).Finalize()
-            window.Maximize()
+            layoutA = [ [sg.Text('Supervisor', font=TITLE_FONT)],
+                        [sg.Text('Please Select Worker', font=HEADER_FONT)],
+                        [sg.Button('AlexR', **btn_kwargs)],
+                        [sg.Button('Shaun', **btn_kwargs)],
+                        [sg.Button('Back', **back_kwargs)]]
+            window = _make_window(layoutA)
             event2, values = window.read()
 
             if event2 == 'AlexR':
@@ -225,13 +247,13 @@ def TimeLog():
             WorkerClass = 'CASUAL'
             signal2 = 0
             while signal2 < 1:
-                layoutA = [  [sg.Text('Supervisor', font=("", 25, "bold"))],
-                                [sg.Text('Please Select Worker or Press Finish Workers To Enter LogoutScreen', font=("", 50, "bold"))],
-                                [sg.Combo(CasualStaffList, default_value = 'Worker', size = 50, key = 'Name', font=("", 35, "bold"))],
-                                [sg.Button('Start Work', font=("", 25, "bold"))], [sg.Button('Finish Workers', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-                layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-                window = sg.Window('Time and Labour', layout).Finalize()
-                window.Maximize()
+                layoutA = [ [sg.Text('Casual Staff', font=TITLE_FONT)],
+                            [sg.Text('Select Worker or Press Finish Workers To Logout', font=BODY_FONT)],
+                            [sg.Combo(CasualStaffList, default_value='Worker', size=COMBO_SIZE, key='Name', font=COMBO_FONT)],
+                            [sg.Button('Start Work', **btn_kwargs)],
+                            [sg.Button('Finish Workers', **btn_kwargs)],
+                            [sg.Button('Back', **back_kwargs)]]
+                window = _make_window(layoutA)
                 event2, values = window.read()
                 if event2 == 'Start Work':
                     window.close()
@@ -249,13 +271,12 @@ def TimeLog():
                         CurrentWorkingCasualDataFrame = CurrentWorkingCasualDataFrame.drop(CurrentWorkingCasualDataFrame[CurrentWorkingCasualDataFrame.Signal == 0].index)
                         print(CurrentWorkingCasualDataFrame)
                         CurrentWorkingCasualList = CurrentWorkingCasualDataFrame['Name'].tolist()
-                        layoutA = [  [sg.Text('Supervisor', font=("", 25, "bold"))],
-                                    [sg.Text('Please Select Worker', font=("", 50, "bold"))],
-                                    [sg.Combo(CurrentWorkingCasualList, default_value = 'Worker', size = 30, key = 'Name', font=("", 30, "bold"))],
-                                    [sg.Button('Finish Job', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-                        layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-                        window = sg.Window('Time and Labour', layout).Finalize()
-                        window.Maximize()
+                        layoutA = [ [sg.Text('Finish Workers', font=TITLE_FONT)],
+                                    [sg.Text('Please Select Worker', font=HEADER_FONT)],
+                                    [sg.Combo(CurrentWorkingCasualList, default_value='Worker', size=COMBO_SIZE, key='Name', font=COMBO_FONT)],
+                                    [sg.Button('Finish Job', **btn_kwargs)],
+                                    [sg.Button('Back', **back_kwargs)]]
+                        window = _make_window(layoutA)
                         event2, values = window.read()
                         if event2 == 'Finish Job':
                             window.close
@@ -263,19 +284,18 @@ def TimeLog():
                             WorkerLogOUT(WorkerName)
                         if event2 == 'Back':
                             signal3 += 1
+
         if event == 'Machine':
             window.close()
             WorkerClass = 'MACHINE'
-            layoutA = [  [sg.Text('Machine', font=("", 25, "bold"))],
-                            [sg.Text('Please Select Machine', font=("", 50, "bold"))],
-                            [sg.Button('Babini', font=("", 25, "bold"))],
-                            [sg.Button('Platform', font=("", 25, "bold"))],
-                            [sg.Button('Squirrel 1', font=("", 25, "bold"))],
-                            [sg.Button('Squirrel 2', font=("", 25, "bold"))],
-                            [sg.Button('Back', font=("", 25, "bold"))]]
-            layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-            window = sg.Window('Time and Labour', layout).Finalize()
-            window.Maximize()
+            layoutA = [ [sg.Text('Machine', font=TITLE_FONT)],
+                        [sg.Text('Please Select Machine', font=HEADER_FONT)],
+                        [sg.Button('Babini', **btn_kwargs)],
+                        [sg.Button('Platform', **btn_kwargs)],
+                        [sg.Button('Squirrel 1', **btn_kwargs)],
+                        [sg.Button('Squirrel 2', **btn_kwargs)],
+                        [sg.Button('Back', **back_kwargs)]]
+            window = _make_window(layoutA)
             event2, values = window.read()
             if event2 == 'Babini':
                 window.close()
@@ -311,6 +331,7 @@ def TimeLog():
                     WorkerLogOUT(WorkerName)
             if event2 == 'Back':
                 window.close()
+
         if event == 'Close Day':
             window.close()
             CurrentWorkingCasualQuery = cursor.execute("""SELECT WorkerName, SUM(Signal) FROM WorkerTimeLog;""")
@@ -323,25 +344,22 @@ def TimeLog():
                 headers = {'Name':[], 'Signal':[]}
                 headings = list(headers)
                 values = CurrentWorkingCasualDataFrame.values.tolist()
-                layoutA = [  [sg.Text('Supervisor', font=("", 25, "bold"))],
-                                [sg.Text('NOT ALL WORKERS ARE SIGNED OUT', font=("", 48, "bold"))],
-                                [sg.Table(values = values, headings = headings, font=("", 25, "bold"))],
-                                [sg.Button('Back', font=("", 50, "bold"))]]
-                layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-                window = sg.Window('Time and Labour', layout).Finalize()
-                window.Maximize()
+                layoutA = [ [sg.Text('Close Day', font=TITLE_FONT)],
+                            [sg.Text('NOT ALL WORKERS ARE SIGNED OUT', font=WARN_FONT)],
+                            [sg.Table(values=values, headings=headings, font=TABLE_FONT)],
+                            [sg.Button('Back', **back_kwargs)]]
+                window = _make_window(layoutA)
                 event2, values = window.read()
             if WorkerLogInCheck == 0:
-                layoutA = [  [sg.Text('Supervisor', font=("", 25, "bold"))],
-                                [sg.Text('WORK DAY CLOSED OFF', font=("", 48, "bold"))],
-                                [sg.Text('THANK YOU, DRIVE SAFE', font=("", 48, "bold"))],
-                                [sg.Button('FINISH', font=("", 50, "bold"))]]
-                layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-                window = sg.Window('Time and Labour', layout).Finalize()
-                window.Maximize()
-                event2, values = window.read()    
+                layoutA = [ [sg.Text('Close Day', font=TITLE_FONT)],
+                            [sg.Text('WORK DAY CLOSED OFF', font=WARN_FONT)],
+                            [sg.Text('THANK YOU, DRIVE SAFE', font=WARN_FONT)],
+                            [sg.Button('FINISH', **btn_kwargs)]]
+                window = _make_window(layoutA)
+                event2, values = window.read()
                 if event2 == 'FINSIH':
                     sys.exit()
+
         if event == 'Status Report':
             window.close()
             CurrentWorkingCasualQuery = cursor.execute("""SELECT WorkerName, SUM(Signal) FROM WorkerTimeLog GROUP BY WorkerName;""")
@@ -350,16 +368,15 @@ def TimeLog():
             headers = {'Name':[], 'Signal':[]}
             headings = list(headers)
             values = CurrentWorkingCasualDataFrame.values.tolist()
-            layoutA = [  [sg.Text('Supervisor', font=("", 25, "bold"))],
-                            [sg.Text('Current Logged In Workers', font=("", 48, "bold"))],
-                            [sg.Table(values = values, headings = headings, font=("", 25, "bold"))],
-                            [sg.Button('Back', font=("", 50, "bold"))]]
-            layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-            window = sg.Window('Time and Labour', layout).Finalize()
-            window.Maximize()
+            layoutA = [ [sg.Text('Status Report', font=TITLE_FONT)],
+                        [sg.Text('Current Logged In Workers', font=HEADER_FONT)],
+                        [sg.Table(values=values, headings=headings, font=TABLE_FONT)],
+                        [sg.Button('Back', **back_kwargs)]]
+            window = _make_window(layoutA)
             event2, values = window.read()
             if event2 == 'Back':
                 window.close()
+
         if event == 'Role Call':
             event == 0
             CurrentWorkingCasualQuery = cursor.execute("""SELECT WorkerName, SUM(Signal) FROM WorkerTimeLog WHERE WorkerCode = 'C2' OR WorkerCode = 'C3' GROUP BY WorkerName;""")
@@ -369,13 +386,12 @@ def TimeLog():
             CurrentWorkerList = CurrentWorkingCasualDataFrame['Name'].tolist()
             for StaffMemeber in CasualStaffList:
                 if StaffMemeber not in CurrentWorkerList:
-                    layoutA = [  [sg.Text(StaffMemeber + ' Not Signed In', font=("", 50, "bold"))],
-                                    [sg.Text('Please Select Reason', font=("", 25, "bold"))],
-                                    [sg.Combo(WorkerReasonList, default_value = 'Reason', size = 30, key = 'Name', font=("", 30, "bold"))],
-                                    [sg.Button('Ok', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-                    layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-                    window = sg.Window('Role Call', layout).Finalize()
-                    window.Maximize()
+                    layoutA = [ [sg.Text(StaffMemeber + ' Not Signed In', font=HEADER_FONT)],
+                                [sg.Text('Please Select Reason', font=BODY_FONT)],
+                                [sg.Combo(WorkerReasonList, default_value='Reason', size=COMBO_SIZE, key='Name', font=COMBO_FONT)],
+                                [sg.Button('Ok', **btn_kwargs)],
+                                [sg.Button('Back', **back_kwargs)]]
+                    window = _make_window(layoutA, 'Role Call')
                     event2, values = window.read()
                     if event2 == 'Ok':
                         window.close()

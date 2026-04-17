@@ -10,6 +10,32 @@ def RowJob():
     import platform
     import re
     import json
+
+    sg.theme('DarkBlue3')
+    TITLE_FONT = ("Sans", 20, "bold")
+    HEADER_FONT = ("Sans", 16, "bold")
+    BODY_FONT = ("Sans", 11, "bold")
+    BTN_FONT = ("Sans", 14, "bold")
+    BTN_SIZE = (22, 2)
+    BTN_PAD = (8, 5)
+    COMBO_FONT = ("Sans", 14, "bold")
+    COMBO_SIZE = 35
+    TABLE_FONT = ("Sans", 12, "bold")
+    WARN_FONT = ("Sans", 22, "bold")
+    SMALL_BTN_FONT = ("Sans", 12, "bold")
+    SMALL_BTN_SIZE = (14, 2)
+
+    def _make_window(layoutA, title='Row Job Manager'):
+        layout = [[sg.VPush()],
+                  [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
+                  [sg.VPush()]]
+        win = sg.Window(title, layout, finalize=True, resizable=True)
+        win.Maximize()
+        return win
+
+    btn_kwargs = dict(font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD, border_width=2)
+    back_kwargs = dict(font=BTN_FONT, size=(12, 1), pad=BTN_PAD, button_color=('white', 'firebrick3'), border_width=2)
+
     #Start Up Database engines....... Vroom
     with open('ACTIVITYLOG.json', 'r') as json_file:
         data = json.load(json_file)
@@ -20,10 +46,10 @@ def RowJob():
                 return block
         return None
     
-    CompName = platform.node() #This is so either of 2 Tablets can access the database but the SQL files are saved seperately
+    CompName = platform.node()
     DB1 = "sqlite:///" + CompName + " TimeSheetLocal.db"
     DB2 = CompName + " TimeSheetLocal.db"
-    print(DB1) #My biggest flaw as a programmer is my over use of print statements........
+    print(DB1)
     print(DB2)
     Day = datetime.datetime.now()
     Day = Day.strftime('%Y-%m-%d')
@@ -54,16 +80,16 @@ def RowJob():
     ####################################################################################################################################################################################################################################
     #Open A Window To Select Field
     ####################################################################################################################################################################################################################################
-    layoutB = [ [sg.Text('Row Job Manager', font=("", 25, "bold"))],
-                [sg.Text('Select Field', font=("", 30, "bold"))],
-                [sg.Combo(FieldList, default_value = 'Field', size = 50, key = 'Field', font=("", 30, "bold"))],
-                [sg.Text('Select Variety', font=("", 30, "bold"))],
-                [sg.Combo(VarietyList, default_value = 'Variety', size = 50, key = 'Variety', font=("", 30, "bold"))],
-                [sg.Text('Select Job Type', font=("", 20, "bold"))],
-                [sg.Combo(JobTypeList, default_value = 'Job', size = 50, key = 'Job', font=("", 30, "bold"))],
-                [sg.Button('Next', font=("", 30, "bold"))], [sg.Button('Back', font=("", 30, "bold"))]]
-    window = sg.Window('Row Job Manager', layoutB).Finalize()
-    window.Maximize()
+    layoutB = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
+                [sg.Text('Select Field', font=HEADER_FONT)],
+                [sg.Combo(FieldList, default_value='Field', size=COMBO_SIZE, key='Field', font=COMBO_FONT)],
+                [sg.Text('Select Variety', font=HEADER_FONT)],
+                [sg.Combo(VarietyList, default_value='Variety', size=COMBO_SIZE, key='Variety', font=COMBO_FONT)],
+                [sg.Text('Select Job Type', font=BODY_FONT)],
+                [sg.Combo(JobTypeList, default_value='Job', size=COMBO_SIZE, key='Job', font=COMBO_FONT)],
+                [sg.Button('Next', **btn_kwargs)],
+                [sg.Button('Back', **back_kwargs)]]
+    window = _make_window(layoutB)
     event, values = window.read()
     if event == 'Back':
         window.close()
@@ -95,16 +121,19 @@ def RowJob():
         headers = {'Worker':[], 'Field':[], 'Variety':[], 'Job_Type':[], 'Signal':[]}
         headings = list(headers)
         values = CurrentRowLogFilter.values.tolist()
-        layoutB = [ [sg.Text('Row Job Manager for %s' % Field, font=("", 25, "bold"))],
-                    [sg.Table(values = values, headings = headings, font=("", 15, "bold"), auto_size_columns=True)],
-                    [sg.Text('To Sign Worker In Select Worker and Press Sign In', font=("", 10, "bold"))],
-                    [sg.Text('To Sign Worker Out Worker and Press Sign Out', font=("", 10, "bold"))],
-                    [sg.Text('For End of Block Or End Of Day Bulk Sign Out Press Sign Out All', font=("", 10, "bold"))],
-                    [sg.Text('Select Worker', font=("", 10, "bold"))],
-                    [sg.Combo(CasualDataFrame["Worker Name"].tolist(), default_value = 'Worker', size = 50, key = 'Worker', font=("", 20, "bold"))],
-                    [sg.pin(sg.Button('Sign In', font=("", 20, "bold"))), sg.pin(sg.Button('Sign Out', font=("", 20, "bold"))), sg.pin(sg.Button('Sign Out All', font=("", 20, "bold"))), sg.pin(sg.Button('Back', font=("", 20, "bold"))), sg.pin(sg.Button('QA LOG', font=("", 20, "bold")))]]
-        window = sg.Window('Row Job Manager', layoutB).Finalize()
-        window.Maximize()
+        layoutB = [ [sg.Text('Row Job Manager for %s' % Field, font=TITLE_FONT)],
+                    [sg.Table(values=values, headings=headings, font=TABLE_FONT, auto_size_columns=True)],
+                    [sg.Text('Sign In: select worker & press Sign In', font=BODY_FONT)],
+                    [sg.Text('Sign Out: select worker & press Sign Out', font=BODY_FONT)],
+                    [sg.Text('Bulk Sign Out: press Sign Out All', font=BODY_FONT)],
+                    [sg.Text('Select Worker', font=BODY_FONT)],
+                    [sg.Combo(CasualDataFrame["Worker Name"].tolist(), default_value='Worker', size=COMBO_SIZE, key='Worker', font=COMBO_FONT)],
+                    [sg.pin(sg.Button('Sign In', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
+                     sg.pin(sg.Button('Sign Out', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
+                     sg.pin(sg.Button('Sign Out All', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
+                     sg.pin(sg.Button('Back', **back_kwargs)),
+                     sg.pin(sg.Button('QA LOG', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2))]]
+        window = _make_window(layoutB)
         event, values = window.read()
     ####################################################################################################################################################################################################################################
     #Event Groups For Close Window
@@ -119,10 +148,9 @@ def RowJob():
             Worker = values['Worker']
             if Worker == "Worker":
                 window.close()
-                layoutB = [ [sg.Text('WORKER INVALID', font=("", 50, "bold"))],
-                            [sg.Button('BACK', font=("", 50, "bold"))]]
-                window = sg.Window('ERROR', layoutB).Finalize()
-                window.Maximize()
+                layoutB = [ [sg.Text('WORKER INVALID', font=WARN_FONT)],
+                            [sg.Button('BACK', **btn_kwargs)]]
+                window = _make_window(layoutB, 'ERROR')
                 event, values = window.read()
                 if event == "BACK":
                     window.close()
@@ -137,10 +165,9 @@ def RowJob():
             WorkerCheckSignal = WorkerCheckLog['Signal'].sum()
             if WorkerCheckSignal == 1:
                 window.close()
-                layoutB = [ [sg.Text('WORKER ALREADY LOGGED IN', font=("", 50, "bold"))],
-                            [sg.Button('BACK', font=("", 50, "bold"))]]
-                window = sg.Window('ERROR', layoutB).Finalize()
-                window.Maximize()
+                layoutB = [ [sg.Text('WORKER ALREADY LOGGED IN', font=WARN_FONT)],
+                            [sg.Button('BACK', **btn_kwargs)]]
+                window = _make_window(layoutB, 'ERROR')
                 event, values = window.read()
                 if event == "BACK":
                     window.close()
@@ -158,10 +185,9 @@ def RowJob():
             Action = 'Finish'
             if Worker == "Worker":
                 window.close()
-                layoutB = [ [sg.Text('WORKER INVALID', font=("", 50, "bold"))],
-                            [sg.Button('BACK', font=("", 50, "bold"))]]
-                window = sg.Window('ERROR', layoutB).Finalize()
-                window.Maximize()
+                layoutB = [ [sg.Text('WORKER INVALID', font=WARN_FONT)],
+                            [sg.Button('BACK', **btn_kwargs)]]
+                window = _make_window(layoutB, 'ERROR')
                 event, values = window.read()
                 if event == "BACK":
                     window.close()
@@ -177,10 +203,9 @@ def RowJob():
             WorkerCheckSignal = WorkerCheckLog['Signal'].sum()
             if WorkerCheckSignal == 0:
                 window.close()
-                layoutB = [ [sg.Text('WORKER NOT LOGGED INTO ROW', font=("", 50, "bold"))],
-                            [sg.Button('BACK', font=("", 50, "bold"))]]
-                window = sg.Window('ERROR', layoutB).Finalize()
-                window.Maximize()
+                layoutB = [ [sg.Text('WORKER NOT LOGGED INTO ROW', font=WARN_FONT)],
+                            [sg.Button('BACK', **btn_kwargs)]]
+                window = _make_window(layoutB, 'ERROR')
                 event, values = window.read()
                 if event == "BACK":
                     window.close()
@@ -191,13 +216,13 @@ def RowJob():
             RowLogDataFrame = pd.DataFrame(columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
             window.close()
     ####################################################################################################################################################################################################################################
-    #Event Groups For Swap - This was in an older version to be able to swap blocks with a single click, could be worth revisiting
+    #Event Groups For Swap
     ####################################################################################################################################################################################################################################
     ####################################################################################################################################################################################################################################
-    #Event Groups For QA - There was also a QA function for logging worker quality checks
+    #Event Groups For QA
     ####################################################################################################################################################################################################################################
     ####################################################################################################################################################################################################################################
-    #Event Groups For End All - This is so at the end of the day you can sign everyone out at once.
+    #Event Groups For End All
     ####################################################################################################################################################################################################################################
         if event == 'Sign Out All':
             for index, row in CurrentRowLogFilter.iterrows():
