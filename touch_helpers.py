@@ -33,6 +33,18 @@ def touch_combo(title, items, font=("Sans", 16, "bold"), size=(50, 12)):
                        modal=True, keep_on_top=True)
     window.Maximize()
 
+    # Make scrollbars wider for easier touch interaction
+    try:
+        listbox_widget = window['-LIST-'].Widget
+        listbox_widget.config(width=size[0])
+        # Configure the parent frame's scrollbar to be wider
+        for child in listbox_widget.master.winfo_children():
+            widget_class = child.winfo_class()
+            if widget_class == 'Scrollbar':
+                child.config(width=30)
+    except Exception:
+        pass
+
     all_items = list(items)
     selected = None
 
