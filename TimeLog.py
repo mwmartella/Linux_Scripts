@@ -31,8 +31,9 @@ WARN_FONT = ("Sans", 22, "bold")
 #Start Up Database engines....... Vroom
 CompName = platform.node()
 print(CompName)
-DB1 = "sqlite:///" + CompName + " TimeSheetLocal.db"
-DB2 = CompName + " TimeSheetLocal.db"
+BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
+DB1 = "sqlite:///" + BASE_PATH + "SUPER2 TimeSheetLocal.db"
+DB2 = BASE_PATH + "SUPER2 TimeSheetLocal.db"
 SignalDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SPLITSIGNAL.xlsx')
 WorkerReasonList = ['Worker Sick', 'Worker Late', 'Worker No Longer Employed']
 def TimeLog():
@@ -45,8 +46,8 @@ def TimeLog():
     engine = create_engine(DB1) 
     sql_connect = sqlite3.connect(DB2)
     cursor = sql_connect.cursor()
-    engine2 = create_engine("sqlite:///TimeSheetGlobal.db") 
-    sql_connect2 = sqlite3.connect('TimeSheetGlobal.db')
+    engine2 = create_engine("sqlite:///" + BASE_PATH + "TimeSheetGlobal.db") 
+    sql_connect2 = sqlite3.connect(BASE_PATH + 'TimeSheetGlobal.db')
     cursor2 = sql_connect.cursor()
     #Compile DataFrames
     SuperDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SUPERVISORS.xlsx')

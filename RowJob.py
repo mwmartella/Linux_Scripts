@@ -18,12 +18,14 @@ VarietyList = VarietyDataFrame['VARIETY'].tolist()
 QACHECKLIST = ['All Good', 'Missed Work - Sent Back', 'Work Too Heavy', 'Work Too Light', 'Worker Issues']
 JobTypeList = ['Picking', 'Pruning', 'Thinning', 'Establish Planting', 'Tree Training', 'Packing', 'Irrigation Maintinance']
 
-engine = create_engine("sqlite:///TimeSheetLocal.db") 
-sql_connect = sqlite3.connect('TimeSheetLocal.db')
+BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
+
+engine = create_engine("sqlite:///" + BASE_PATH + "SUPER2 TimeSheetLocal.db") 
+sql_connect = sqlite3.connect(BASE_PATH + 'SUPER2 TimeSheetLocal.db')
 cursor = sql_connect.cursor()
 
-engine2 = create_engine("sqlite:///RowJobQa.db") 
-sql_connect2 = sqlite3.connect('RowJobQa.db')
+engine2 = create_engine("sqlite:///" + BASE_PATH + "RowJobQa.db") 
+sql_connect2 = sqlite3.connect(BASE_PATH + 'RowJobQa.db')
 cursor2 = sql_connect2.cursor()
 
 def StatusRport(Field):

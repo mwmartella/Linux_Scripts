@@ -46,9 +46,10 @@ def RowJob():
                 return block
         return None
     
+    BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
     CompName = platform.node()
-    DB1 = "sqlite:///" + CompName + " TimeSheetLocal.db"
-    DB2 = CompName + " TimeSheetLocal.db"
+    DB1 = "sqlite:///" + BASE_PATH + "SUPER2 TimeSheetLocal.db"
+    DB2 = BASE_PATH + "SUPER2 TimeSheetLocal.db"
     print(DB1)
     print(DB2)
     Day = datetime.datetime.now()
@@ -74,8 +75,8 @@ def RowJob():
     engine = create_engine(DB1) 
     sql_connect = sqlite3.connect(DB2)
     cursor = sql_connect.cursor()
-    engine2 = create_engine("sqlite:///RowJobQa.db") 
-    sql_connect2 = sqlite3.connect('RowJobQa.db')
+    engine2 = create_engine("sqlite:///" + BASE_PATH + "RowJobQa.db") 
+    sql_connect2 = sqlite3.connect(BASE_PATH + 'RowJobQa.db')
     cursor2 = sql_connect2.cursor()
     ####################################################################################################################################################################################################################################
     #Open A Window To Select Field

@@ -34,10 +34,11 @@ btn_kwargs = dict(font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD, border_width=2)
 back_kwargs = dict(font=BTN_FONT, size=(12, 1), pad=BTN_PAD, button_color=('white', 'firebrick3'), border_width=2)
 
 def CherryHarvest():
+    BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
     CompName = platform.node()
     print(CompName)
-    DB1 = "sqlite:///" + CompName + " CherryLog.db"
-    DB2 = CompName + " CherryLog.db"
+    DB1 = "sqlite:///" + BASE_PATH + "SUPER2 CherryLog.db"
+    DB2 = BASE_PATH + "SUPER2 CherryLog.db"
     FieldList = ['WISHARTS - PL', 'WISHARTS - BRAVO' 'CHERRYS', 'CHERRY BRAVO', 'S-SHED', 'STK', 'P-BELLE', 'LIR', 'ROB BRAVO', 'MODI', 'DWF', 'GSPL', 'TOTAL']
     BlockDataFrame = pd.read_excel('BlockData\\BLOCKDATA.xlsx')
     SuperDataFrame = pd.read_excel('Worker Data\\SUPERVISORS.xlsx')
