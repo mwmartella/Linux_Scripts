@@ -30,18 +30,35 @@ engine3 = create_engine("sqlite:///RowJobQa.db")
 sql_connect3 = sqlite3.connect('RowJobQa.db')
 cursor3 = sql_connect3.cursor()
 
+sg.theme('DarkBlue3')
+
+# Surface 3: 10.8" at 1920x1280 — scale fonts/buttons for touch on small high-DPI screen
+TITLE_FONT = ("Sans", 28, "bold")
+SUBTITLE_FONT = ("Sans", 18, "bold")
+BTN_FONT = ("Sans", 16, "bold")
+BTN_SIZE = (28, 2)
+BTN_PAD = (8, 6)
+
 MasterSignal = 0
 while MasterSignal < 1:
-    layoutA = [  [sg.Text('Field Manager', font=("", 50, "bold"))],
-                        [sg.Text('Please Select Supervisor Task', font=("", 35, "bold"))],
-                        [sg.Button('Timesheet Log', font=("", 25, "bold"))],
-                        [sg.Button('Row Job Manager', font=("", 25, "bold"))],
-                        [sg.Button('Cherry Harvest Manager', font=("", 25, "bold"))],
-                        [sg.Button('Apple Harvest Manager', font=("", 25, "bold"))],
-                        [sg.Button('Status Report', font=("", 25, "bold"))],
-                        [sg.Button('Quit', font=("", 25, "bold"))]]
-    layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-    window = sg.Window('Time and Labour', layout).Finalize()
+    btn_kwargs = dict(font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD, border_width=2)
+    layoutA = [
+        [sg.Text('Field Manager', font=TITLE_FONT, justification='center')],
+        [sg.Text('Please Select Supervisor Task', font=SUBTITLE_FONT, justification='center')],
+        [sg.Button('Timesheet Log', **btn_kwargs)],
+        [sg.Button('Row Job Manager', **btn_kwargs)],
+        [sg.Button('Cherry Harvest Manager', **btn_kwargs)],
+        [sg.Button('Apple Harvest Manager', **btn_kwargs)],
+        [sg.Button('Status Report', **btn_kwargs)],
+        [sg.VPush()],
+        [sg.Button('Quit', font=BTN_FONT, size=(12, 1), pad=BTN_PAD,
+                    button_color=('white', 'firebrick3'), border_width=2)],
+    ]
+    layout = [[sg.VPush()],
+              [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
+              [sg.VPush()]]
+    window = sg.Window('Time and Labour', layout, finalize=True,
+                       resizable=True, keep_on_top=False)
     window.Maximize()
     event, values = window.read()
     if event == 'Timesheet Log':
