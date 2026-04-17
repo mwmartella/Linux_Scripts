@@ -41,7 +41,7 @@ def touch_combo(title, items, font=("Sans", 16, "bold"), size=(50, 12)):
         for child in listbox_widget.master.winfo_children():
             widget_class = child.winfo_class()
             if widget_class == 'Scrollbar':
-                child.config(width=30)
+                child.config(width=80)
     except Exception:
         pass
 
