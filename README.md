@@ -1,5 +1,16 @@
 # Field Manager - Desktop Launcher Setup
 
+## Install Python dependencies (run once)
+```bash
+pip3 install -r ~/Documents/Linux_Scripts/requirements.txt
+```
+If you get a permission error:
+```bash
+pip3 install --user -r ~/Documents/Linux_Scripts/requirements.txt
+```
+
+---
+
 ## After pulling files to the tablet, run these commands:
 
 ### 1. Make the launcher script executable
