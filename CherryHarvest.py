@@ -8,6 +8,7 @@ import textwrap
 import RowJob
 import re
 import platform
+from touch_helpers import make_touch_combo_row, handle_touch_combos
 
 sg.theme('DarkBlue3')
 TITLE_FONT = ("Sans", 20, "bold")
@@ -87,15 +88,23 @@ def CherryHarvest():
                     [sg.pin(sg.Table(values=values, headings=headings, col_widths=[30,30], font=TABLE_FONT)),
                      sg.pin(sg.Table(values=values2, headings=headings2, col_widths=[30,30], font=TABLE_FONT))],
                     [sg.Text('Select Worker', font=BODY_FONT)],
-                    [sg.Combo(TotalWorkerList, default_value='Worker', size=COMBO_SIZE, key='W', font=COMBO_FONT)],
+                    make_touch_combo_row('Select Worker', 'W'),
                     [sg.Text('Type Crate ID', font=HEADER_FONT)],
                     [sg.InputText(key='CrateNum', font=INPUT_FONT)],
                     [sg.Text('Select QA', font=HEADER_FONT)],
-                    [sg.Combo(QACHECKLIST, default_value='QA', size=COMBO_SIZE, key='QA', font=COMBO_FONT)],
+                    make_touch_combo_row('Select QA', 'QA'),
                     [sg.Button('LOG', **btn_kwargs)],
                     [sg.Button('Quit', **back_kwargs)]]
+            _combos_crate = {
+                'W': ('Select Worker', TotalWorkerList),
+                'QA': ('Select QA', QACHECKLIST),
+            }
             window = _make_window(layoutB, 'Crate Logger')
-            event, values = window.read()
+            while True:
+                event, values = window.read()
+                if handle_touch_combos(event, window, _combos_crate):
+                    continue
+                break
             if event == 'Quit':
                 window.close()
                 Signal = 1

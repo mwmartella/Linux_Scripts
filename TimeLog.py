@@ -14,6 +14,7 @@ import datetime
 import sys
 import textwrap
 import platform
+from touch_helpers import make_touch_combo_row, handle_touch_combos
 
 sg.theme('DarkBlue3')
 TITLE_FONT = ("Sans", 20, "bold")
@@ -250,12 +251,17 @@ def TimeLog():
             while signal2 < 1:
                 layoutA = [ [sg.Text('Casual Staff', font=TITLE_FONT)],
                             [sg.Text('Select Worker or Press Finish Workers To Logout', font=BODY_FONT)],
-                            [sg.Combo(CasualStaffList, default_value='Worker', size=COMBO_SIZE, key='Name', font=COMBO_FONT)],
+                            make_touch_combo_row('Select Worker', 'Name'),
                             [sg.Button('Start Work', **btn_kwargs)],
                             [sg.Button('Finish Workers', **btn_kwargs)],
                             [sg.Button('Back', **back_kwargs)]]
+                _combos_casual = {'Name': ('Select Worker', CasualStaffList)}
                 window = _make_window(layoutA)
-                event2, values = window.read()
+                while True:
+                    event2, values = window.read()
+                    if handle_touch_combos(event2, window, _combos_casual):
+                        continue
+                    break
                 if event2 == 'Start Work':
                     window.close()
                     WorkerName = values['Name']
@@ -274,11 +280,16 @@ def TimeLog():
                         CurrentWorkingCasualList = CurrentWorkingCasualDataFrame['Name'].tolist()
                         layoutA = [ [sg.Text('Finish Workers', font=TITLE_FONT)],
                                     [sg.Text('Please Select Worker', font=HEADER_FONT)],
-                                    [sg.Combo(CurrentWorkingCasualList, default_value='Worker', size=COMBO_SIZE, key='Name', font=COMBO_FONT)],
+                                    make_touch_combo_row('Select Worker', 'Name'),
                                     [sg.Button('Finish Job', **btn_kwargs)],
                                     [sg.Button('Back', **back_kwargs)]]
+                        _combos_finish = {'Name': ('Select Worker', CurrentWorkingCasualList)}
                         window = _make_window(layoutA)
-                        event2, values = window.read()
+                        while True:
+                            event2, values = window.read()
+                            if handle_touch_combos(event2, window, _combos_finish):
+                                continue
+                            break
                         if event2 == 'Finish Job':
                             window.close
                             WorkerName = values['Name']
@@ -389,11 +400,16 @@ def TimeLog():
                 if StaffMemeber not in CurrentWorkerList:
                     layoutA = [ [sg.Text(StaffMemeber + ' Not Signed In', font=HEADER_FONT)],
                                 [sg.Text('Please Select Reason', font=BODY_FONT)],
-                                [sg.Combo(WorkerReasonList, default_value='Reason', size=COMBO_SIZE, key='Name', font=COMBO_FONT)],
+                                make_touch_combo_row('Select Reason', 'Name'),
                                 [sg.Button('Ok', **btn_kwargs)],
                                 [sg.Button('Back', **back_kwargs)]]
+                    _combos_reason = {'Name': ('Select Reason', WorkerReasonList)}
                     window = _make_window(layoutA, 'Role Call')
-                    event2, values = window.read()
+                    while True:
+                        event2, values = window.read()
+                        if handle_touch_combos(event2, window, _combos_reason):
+                            continue
+                        break
                     if event2 == 'Ok':
                         window.close()
                         TimeStamp = datetime.datetime.now()

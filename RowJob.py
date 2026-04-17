@@ -5,6 +5,7 @@ import FreeSimpleGUI as sg
 import datetime
 import sys
 import textwrap
+from touch_helpers import make_touch_combo_row, handle_touch_combos
 
 FieldList = ['WISHARTS - PL', 'WISHARTS - BRAVO', 'CHERRYS', 'CHERRY BRAVO', 'S-SHED', 'STK', 'P-BELLE', 'LIR', 'ROB BRAVO', 'MODI', 'DWF', 'GSPL', 'TOTAL']
 BlockDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/BlockData/BLOCKDATA.xlsx')
@@ -62,13 +63,20 @@ def ActionLog():
     if 'Shaun' not in TotalWorkerList:
         TotalWorkerList.append('Shaun')
     while WorkerLoop < 1:
-        layoutB = [  [sg.Text('Row Job Manager', font=("", 25, "bold"))],
-                [sg.Text('Select Worker', font=("", 30, "bold"))],
-                [sg.Combo(TotalWorkerList, default_value = 'Worker', size = 50, key = 'Worker', font=("", 35, "bold"))],
-                [sg.Button('Start', font=("", 35, "bold"))], [sg.Button('End', font=("", 35, "bold"))], [sg.Button('Back', font=("", 35, "bold"))], [sg.Button('Finish Row', font=("", 35, "bold"))]]
-        window = sg.Window('Time and Labour', layoutB).Finalize()
-        window.Maximize()
-        event, values = window.read()
+        layoutB = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
+                [sg.Text('Select Worker', font=HEADER_FONT)],
+                make_touch_combo_row('Select Worker', 'Worker'),
+                [sg.Button('Start', **btn_kwargs)],
+                [sg.Button('End', **btn_kwargs)],
+                [sg.Button('Back', **back_kwargs)],
+                [sg.Button('Finish Row', **btn_kwargs)]]
+        _combos_action = {'Worker': ('Select Worker', TotalWorkerList)}
+        window = _make_window(layoutB)
+        while True:
+            event, values = window.read()
+            if handle_touch_combos(event, window, _combos_action):
+                continue
+            break
         Worker = values['Worker']
         CurrentWorkingQuery = cursor.execute("""SELECT Worker, Row, SUM(Signal) FROM WorkerRowLog WHERE Worker = '%s' AND Row = '%s';""" % (Worker, RowNumber))
         CurrentWorkingDataFrame = pd.DataFrame(CurrentWorkingQuery, columns=['Name', 'Row', 'Signal'])
@@ -82,12 +90,12 @@ def ActionLog():
                 BlockFinder = CurrentWorkingDataFrame['Row'].tolist()
                 indexneeded = len(WorkerBlockFinder) - 1
                 Block = BlockFinder[indexneeded]
-                layoutZ = [  [sg.Text('Row Job Manager', font=("", 25, "bold"))],
-                [sg.Text('WORKER ALREADY LOGGED INTO A ROW', font=("", 30, "bold"))],
-                [sg.Text(Worker + ' is in row ' + Block, font=("", 30, "bold"))],
-                [sg.Button('Return', font=("", 35, "bold"))], [sg.Button('Log In Anyway', font=("", 35, "bold"))],]
-                window = sg.Window('Time and Labour', layoutZ).Finalize()
-                window.Maximize()
+                layoutZ = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
+                [sg.Text('WORKER ALREADY LOGGED INTO A ROW', font=HEADER_FONT)],
+                [sg.Text(Worker + ' is in row ' + Block, font=HEADER_FONT)],
+                [sg.Button('Return', **btn_kwargs)],
+                [sg.Button('Log In Anyway', **btn_kwargs)]]
+                window = _make_window(layoutZ)
                 event, values = window.read()
                 if event == 'Return':
                     window.close()
@@ -102,11 +110,10 @@ def ActionLog():
         if event == 'End':
             window.close()
             if WorkerLogInCheck == 0:
-                layoutZ = [  [sg.Text('Row Job Manager', font=("", 25, "bold"))],
-                [sg.Text('WORKER IS NOT CURRENTLY LOGGED INTO A ROW', font=("", 30, "bold"))],
-                [sg.Button('Return', font=("", 35, "bold"))]]
-                window = sg.Window('Time and Labour', layoutZ).Finalize()
-                window.Maximize()
+                layoutZ = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
+                [sg.Text('WORKER IS NOT CURRENTLY LOGGED INTO A ROW', font=HEADER_FONT)],
+                [sg.Button('Return', **btn_kwargs)]]
+                window = _make_window(layoutZ)
                 event, values = window.read()
                 if event == 'Return':
                     window.close()
@@ -145,24 +152,27 @@ def ActionLog():
                 workerstring = ''
                 for Worker100 in WorkerList100:
                     workerstring = workerstring + ' ' + Worker100 + ','
-                layoutZ = [  [sg.Text('Row Job Manager', font=("", 25, "bold"))],
-                [sg.Text('ROW STILL HAS WORKERS LOGGED IN', font=("", 30, "bold"))],
-                [sg.Text('Workers = ' + workerstring, font=("", 30, "bold"))],
-                [sg.Button('Return', font=("", 35, "bold"))]]
-                window = sg.Window('Time and Labour', layoutZ).Finalize()
-                window.Maximize()
+                layoutZ = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
+                [sg.Text('ROW STILL HAS WORKERS LOGGED IN', font=HEADER_FONT)],
+                [sg.Text('Workers = ' + workerstring, font=BODY_FONT)],
+                [sg.Button('Return', **btn_kwargs)]]
+                window = _make_window(layoutZ)
                 event, values = window.read()
                 if event == 'Return':
                     window.close()
             elif RowWorkerTest == 0:
-                layoutZ = [  [sg.Text('Row Job Manager', font=("", 25, "bold"))],
-                [sg.Text('ROW FINISH - QA CHECK', font=("", 30, "bold"))],
-                [sg.Text('After Row Has Been Finshed Please Select Quality of Row', font=("", 30, "bold"))],
-                [sg.Combo(QACHECKLIST, default_value = 'QA', size = 50, key = 'QA', font=("", 35, "bold"))],
-                [sg.Button('Finish', font=("", 35, "bold"))]]
-                window = sg.Window('Time and Labour', layoutZ).Finalize()
-                window.Maximize()
-                event, values = window.read()
+                layoutZ = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
+                [sg.Text('ROW FINISH - QA CHECK', font=HEADER_FONT)],
+                [sg.Text('After Row Has Been Finished Please Select Quality of Row', font=BODY_FONT)],
+                make_touch_combo_row('Select QA', 'QA'),
+                [sg.Button('Finish', **btn_kwargs)]]
+                _combos_qa = {'QA': ('Select QA', QACHECKLIST)}
+                window = _make_window(layoutZ)
+                while True:
+                    event, values = window.read()
+                    if handle_touch_combos(event, window, _combos_qa):
+                        continue
+                    break
                 if event == 'Finish':
                     window.close()
                     RowQADataFrame = pd.DataFrame(columns=['Date', 'Field', 'Row', 'Job', 'Worker', 'QA', 'Variety'])
@@ -184,16 +194,24 @@ def RowJob():
     global RowNumber
     global Worker
     global Variety
-    layoutA = [  [sg.Text('Row Job Manager', font=("", 25, "bold"))],
-                        [sg.Text('Please Select Field', font=("", 35, "bold"))],
-                        [sg.Combo(FieldList, default_value = 'Field', size = 50, key = 'Field', font=("", 35, "bold"))],
-                        [sg.Combo(JobTypeList, default_value = 'Job', size = 50, key = 'Job', font=("", 35, "bold"))],
-                        [sg.Combo(VarietyList, default_value = 'Variety', size = 50, key = 'Variety', font=("", 30, "bold"))],
-                        [sg.Button('Start', font=("", 25, "bold"))], [sg.Button('Back', font=("", 25, "bold"))]]
-    layout = [sg.Push(), sg.Column(layoutA, element_justification='c'), sg.Push()],
-    window = sg.Window('Time and Labour', layout).Finalize()
-    window.Maximize()
-    event, values = window.read()
+    layoutA = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
+                [sg.Text('Please Select Field', font=HEADER_FONT)],
+                make_touch_combo_row('Select Field', 'Field'),
+                make_touch_combo_row('Select Job', 'Job'),
+                make_touch_combo_row('Select Variety', 'Variety'),
+                [sg.Button('Start', **btn_kwargs)],
+                [sg.Button('Back', **back_kwargs)]]
+    _combos_rj = {
+        'Field': ('Select Field', FieldList),
+        'Job': ('Select Job Type', JobTypeList),
+        'Variety': ('Select Variety', VarietyList),
+    }
+    window = _make_window(layoutA)
+    while True:
+        event, values = window.read()
+        if handle_touch_combos(event, window, _combos_rj):
+            continue
+        break
     if event == 'Back':
         window.close()
     if event == 'Start':

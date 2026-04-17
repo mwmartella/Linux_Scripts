@@ -10,6 +10,7 @@ def RowJob():
     import platform
     import re
     import json
+    from touch_helpers import make_touch_combo_row, handle_touch_combos
 
     sg.theme('DarkBlue3')
     TITLE_FONT = ("Sans", 20, "bold")
@@ -83,15 +84,24 @@ def RowJob():
     ####################################################################################################################################################################################################################################
     layoutB = [ [sg.Text('Row Job Manager', font=TITLE_FONT)],
                 [sg.Text('Select Field', font=HEADER_FONT)],
-                [sg.Combo(FieldList, default_value='Field', size=COMBO_SIZE, key='Field', font=COMBO_FONT)],
+                make_touch_combo_row('Select Field', 'Field'),
                 [sg.Text('Select Variety', font=HEADER_FONT)],
-                [sg.Combo(VarietyList, default_value='Variety', size=COMBO_SIZE, key='Variety', font=COMBO_FONT)],
+                make_touch_combo_row('Select Variety', 'Variety'),
                 [sg.Text('Select Job Type', font=BODY_FONT)],
-                [sg.Combo(JobTypeList, default_value='Job', size=COMBO_SIZE, key='Job', font=COMBO_FONT)],
+                make_touch_combo_row('Select Job', 'Job'),
                 [sg.Button('Next', **btn_kwargs)],
                 [sg.Button('Back', **back_kwargs)]]
+    _combos_field = {
+        'Field': ('Select Field', FieldList),
+        'Variety': ('Select Variety', VarietyList),
+        'Job': ('Select Job Type', JobTypeList),
+    }
     window = _make_window(layoutB)
-    event, values = window.read()
+    while True:
+        event, values = window.read()
+        if handle_touch_combos(event, window, _combos_field):
+            continue
+        break
     if event == 'Back':
         window.close()
     if event == 'Next':
@@ -128,14 +138,21 @@ def RowJob():
                     [sg.Text('Sign Out: select worker & press Sign Out', font=BODY_FONT)],
                     [sg.Text('Bulk Sign Out: press Sign Out All', font=BODY_FONT)],
                     [sg.Text('Select Worker', font=BODY_FONT)],
-                    [sg.Combo(CasualDataFrame["Worker Name"].tolist(), default_value='Worker', size=COMBO_SIZE, key='Worker', font=COMBO_FONT)],
+                    make_touch_combo_row('Select Worker', 'Worker'),
                     [sg.pin(sg.Button('Sign In', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
                      sg.pin(sg.Button('Sign Out', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
                      sg.pin(sg.Button('Sign Out All', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
                      sg.pin(sg.Button('Back', **back_kwargs)),
                      sg.pin(sg.Button('QA LOG', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2))]]
+        _combos_worker = {
+            'Worker': ('Select Worker', CasualDataFrame["Worker Name"].tolist()),
+        }
         window = _make_window(layoutB)
-        event, values = window.read()
+        while True:
+            event, values = window.read()
+            if handle_touch_combos(event, window, _combos_worker):
+                continue
+            break
     ####################################################################################################################################################################################################################################
     #Event Groups For Close Window
     ####################################################################################################################################################################################################################################    
