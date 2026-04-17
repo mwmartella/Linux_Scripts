@@ -9,7 +9,7 @@
 from sqlalchemy import create_engine
 import sqlite3
 import pandas as pd
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import datetime
 import sys
 import textwrap

@@ -1,5 +1,5 @@
-SQLAlchemy==1.4.44
-pandas==1.5.3
-PySimpleGUI==5.0.3
-openpyxl==3.1.2
+SQLAlchemy>=1.4,<3
+pandas>=1.5,<3
+FreeSimpleGUI>=5.0
+openpyxl>=3.1
 
