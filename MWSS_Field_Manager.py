@@ -9,6 +9,7 @@ import TimeLog
 import RowJob2
 import CherryHarvest
 import platform
+import subprocess
 #Start Up Database engines....... Vroom+
 SignalDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SPLITSIGNAL.xlsx')
 
@@ -51,6 +52,8 @@ while MasterSignal < 1:
         [sg.Button('Cherry Harvest Manager', **btn_kwargs)],
         [sg.Button('Apple Harvest Manager', **btn_kwargs)],
         [sg.Button('Status Report', **btn_kwargs)],
+        [sg.Button('Sync OneDrive', font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD,
+                    button_color=('white', 'DarkGreen'), border_width=2)],
         [sg.VPush()],
         [sg.Button('Quit', font=BTN_FONT, size=(12, 1), pad=BTN_PAD,
                     button_color=('white', 'firebrick3'), border_width=2)],
@@ -78,6 +81,25 @@ while MasterSignal < 1:
     elif event == 'Cherry Harvest Manager':
         window.close()
         CherryHarvest.CherryHarvest()
+    elif event == 'Sync OneDrive':
+        window.close()
+        try:
+            result = subprocess.run(
+                ['onedrive', '--synchronize'],
+                capture_output=True, text=True, timeout=300
+            )
+            if result.returncode == 0:
+                sg.popup('OneDrive sync completed successfully!',
+                         title='Sync Complete', font=BTN_FONT, keep_on_top=True)
+            else:
+                sg.popup('Sync finished with errors:\n' + result.stderr[-500:],
+                         title='Sync Error', font=BTN_FONT, keep_on_top=True)
+        except FileNotFoundError:
+            sg.popup('onedrive client not found.\nInstall with: sudo apt install onedrive',
+                     title='Sync Error', font=BTN_FONT, keep_on_top=True)
+        except subprocess.TimeoutExpired:
+            sg.popup('Sync timed out after 5 minutes.',
+                     title='Sync Timeout', font=BTN_FONT, keep_on_top=True)
     elif event == 'Quit':
         #FinalDailyDatabase = cursor.execute("""SELECT * FROM WorkerTimeLog""")
         ##FinalDailyDataFrame.to_csv(CompName + 'FINALDAILY.csv')
