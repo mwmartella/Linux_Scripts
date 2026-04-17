@@ -73,7 +73,7 @@ def make_touch_combo_row(label, key, default='--Select--', display_size=30):
     """
     return [
         sg.Input(default, key=key, font=DISPLAY_FONT, size=(display_size, 1),
-                 readonly=True, disabled_readonly_background_color='#1a1a2e',
+                 readonly=True, disabled_readonly_background_color='#4a6984',
                  disabled_readonly_text_color='white'),
         sg.Button(label, key=f'_SELECT_{key}_', font=SELECT_BTN_FONT,
                   size=(16, 1), border_width=2),
