@@ -188,17 +188,13 @@ def RowJob():
     def _get_row_logged_in_workers(field):
         """Return set of worker names already signed into this row job today."""
         try:
-            result = cursor.execute(
-                "SELECT * FROM WorkerRowLog WHERE Field = ?", (field,))
-            df = pd.DataFrame(
-                result.fetchall(),
-                columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
-            df = df[df['TimeStamp'].astype(str).str.contains(RE, regex=True, na=False)]
-            if df.empty:
-                return set()
-            df['Signal'] = pd.to_numeric(df['Signal'], errors='coerce').fillna(0)
-            grouped = df.groupby('Worker')['Signal'].sum().reset_index()
-            already = set(grouped.loc[grouped['Signal'] >= 1, 'Worker'].tolist())
+            query = cursor.execute(
+                "SELECT Worker, SUM(Signal) as Signal FROM WorkerRowLog "
+                "WHERE Field = ? AND TimeStamp LIKE ? GROUP BY Worker;",
+                (field, Day + '%'))
+            df = pd.DataFrame(query, columns=['Worker', 'Signal'])
+            df = df.drop(df[df.Signal == 0].index)
+            already = set(df['Worker'].tolist())
             print(f"[RowJob] Already on row for {field}: {already}")
             return already
         except Exception as e:
@@ -207,26 +203,21 @@ def RowJob():
 
     Signalq = 0
     while Signalq == 0:
-        # Query current row-job status safely
+        # Query current row-job status safely — use same pattern as working
+        # Status Report in TimeLog.py: pass cursor directly to pd.DataFrame
         try:
-            CurrentRowLog = cursor.execute(
-                "SELECT * FROM WorkerRowLog WHERE Field = ?", (Field,))
-            CurrentRowLogFrame = pd.DataFrame(
-                CurrentRowLog.fetchall(),
-                columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
-        except Exception:
-            CurrentRowLogFrame = pd.DataFrame(
-                columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
-
-        CurrentRowLogFrame = CurrentRowLogFrame[
-            CurrentRowLogFrame['TimeStamp'].astype(str).str.contains(RE, regex=True, na=False)]
-
-        if not CurrentRowLogFrame.empty:
-            CurrentRowLogFrame['Signal'] = pd.to_numeric(CurrentRowLogFrame['Signal'], errors='coerce').fillna(0)
-            CurrentRowLogFrame = CurrentRowLogFrame.groupby(
-                ['Worker', 'Field', 'Variety', 'Job_Type'])['Signal'].sum().reset_index()
-            CurrentRowLogFilter = CurrentRowLogFrame.loc[CurrentRowLogFrame['Signal'] == 1].copy()
-        else:
+            query = cursor.execute(
+                "SELECT Worker, Field, Variety, Job_Type, SUM(Signal) as Signal "
+                "FROM WorkerRowLog WHERE Field = ? AND TimeStamp LIKE ? "
+                "GROUP BY Worker, Field, Variety, Job_Type;",
+                (Field, Day + '%'))
+            CurrentRowLogFilter = pd.DataFrame(query, columns=['Worker', 'Field', 'Variety', 'Job_Type', 'Signal'])
+            # Keep only workers whose signal > 0 (signed in)
+            CurrentRowLogFilter = CurrentRowLogFilter.drop(
+                CurrentRowLogFilter[CurrentRowLogFilter.Signal == 0].index)
+            print(f"[RowJob] Workers currently on row: {CurrentRowLogFilter['Worker'].tolist()}")
+        except Exception as e:
+            print(f"[RowJob] ERROR querying row status: {e}")
             CurrentRowLogFilter = pd.DataFrame(columns=['Worker', 'Field', 'Variety', 'Job_Type', 'Signal'])
 
         headers = {'Worker': [], 'Field': [], 'Variety': [], 'Job_Type': [], 'Signal': []}
@@ -239,6 +230,8 @@ def RowJob():
                                      border_width=2, button_color=('white', 'DarkGreen'))),
                     sg.pin(sg.Button('Add All Workers', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD,
                                      border_width=2, button_color=('white', 'DarkGreen'))),
+                    sg.pin(sg.Button('End Workers', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD,
+                                     border_width=2)),
                     sg.pin(sg.Button('Sign Out All', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
                     sg.pin(sg.Button('Back', **back_kwargs)),
                     sg.pin(sg.Button('QA LOG', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2))]]
@@ -305,6 +298,29 @@ def RowJob():
             try:
                 TimeStamp = datetime.datetime.now()
                 rows_to_write = [[Field, block_row, w, 'Start', TimeStamp, 1, Variety, JobType] for w in available]
+                bulk_df = pd.DataFrame(
+                    rows_to_write,
+                    columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
+                bulk_df.to_sql('WorkerRowLog', con=engine, if_exists='append', index=False)
+            except Exception as e:
+                _show_error(f'DB WRITE ERROR:\n{str(e)[:200]}')
+            continue
+
+        # ── End Workers (multi-select sign-out) ──────────────────────────
+        if event == 'End Workers':
+            _safe_close(window)
+            if CurrentRowLogFilter.empty:
+                _show_error('NO WORKERS ON THIS ROW')
+                continue
+
+            on_row = sorted(CurrentRowLogFilter['Worker'].tolist())
+            chosen = touch_multi_select('Select Workers to Sign Out', on_row)
+            if not chosen:
+                continue
+
+            try:
+                TimeStamp = datetime.datetime.now()
+                rows_to_write = [[Field, block_row, w, 'Finish', TimeStamp, -1, Variety, JobType] for w in chosen]
                 bulk_df = pd.DataFrame(
                     rows_to_write,
                     columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
