@@ -84,22 +84,81 @@ while MasterSignal < 1:
     elif event == 'Sync OneDrive':
         window.close()
         try:
-            result = subprocess.run(
+            proc = subprocess.Popen(
                 ['onedrive', '--synchronize'],
-                capture_output=True, text=True, timeout=300
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
             )
-            if result.returncode == 0:
-                sg.popup('OneDrive sync completed successfully!',
-                         title='Sync Complete', font=BTN_FONT, keep_on_top=True)
-            else:
-                sg.popup('Sync finished with errors:\n' + result.stderr[-500:],
-                         title='Sync Error', font=BTN_FONT, keep_on_top=True)
         except FileNotFoundError:
             sg.popup('onedrive client not found.\nInstall with: sudo apt install onedrive',
                      title='Sync Error', font=BTN_FONT, keep_on_top=True)
-        except subprocess.TimeoutExpired:
+            continue
+
+        # ── Progress window ───────────────────────────────────────────────
+        SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+        spin_layout = [
+            [sg.Text('Syncing OneDrive…', font=("Sans", 22, "bold"),
+                     justification='center', expand_x=True)],
+            [sg.Text(SPINNER[0], key='-SPIN-', font=("Sans", 48, "bold"),
+                     justification='center', expand_x=True)],
+            [sg.Text('Please wait — do not close this window.',
+                     font=("Sans", 14), justification='center', expand_x=True)],
+            [sg.Text('', key='-STATUS-', font=("Sans", 11), justification='center',
+                     size=(60, 2), expand_x=True)],
+        ]
+        spin_window = sg.Window(
+            'Syncing…',
+            [[sg.VPush()],
+             [sg.Push(), sg.Column(spin_layout, element_justification='c'), sg.Push()],
+             [sg.VPush()]],
+            finalize=True, resizable=True, keep_on_top=True,
+            no_titlebar=False, modal=False
+        )
+        spin_window.Maximize()
+
+        spin_idx   = 0
+        last_line  = ''
+        timed_out  = False
+        poll_count = 0
+        MAX_POLLS  = 1800   # 300 s at 166 ms each
+
+        while proc.poll() is None:
+            spin_window.read(timeout=166)           # ~6 frames/sec
+            spin_idx = (spin_idx + 1) % len(SPINNER)
+            spin_window['-SPIN-'].update(SPINNER[spin_idx])
+
+            # Read any new output without blocking
+            try:
+                import select
+                ready, _, _ = select.select([proc.stdout], [], [], 0)
+                if ready:
+                    line = proc.stdout.readline().strip()
+                    if line:
+                        last_line = line[-80:]      # keep last 80 chars
+                        spin_window['-STATUS-'].update(last_line)
+            except Exception:
+                pass
+
+            poll_count += 1
+            if poll_count >= MAX_POLLS:
+                proc.kill()
+                timed_out = True
+                break
+
+        spin_window.close()
+
+        if timed_out:
             sg.popup('Sync timed out after 5 minutes.',
                      title='Sync Timeout', font=BTN_FONT, keep_on_top=True)
+        elif proc.returncode == 0:
+            sg.popup('✔  OneDrive sync completed successfully!',
+                     title='Sync Complete', font=BTN_FONT, keep_on_top=True)
+        else:
+            # Grab any remaining stderr
+            remaining = proc.stdout.read()[-500:] if proc.stdout else ''
+            sg.popup(f'Sync finished with errors:\n{remaining}',
+                     title='Sync Error', font=BTN_FONT, keep_on_top=True)
     elif event == 'Quit':
         #FinalDailyDatabase = cursor.execute("""SELECT * FROM WorkerTimeLog""")
         ##FinalDailyDataFrame.to_csv(CompName + 'FINALDAILY.csv')
