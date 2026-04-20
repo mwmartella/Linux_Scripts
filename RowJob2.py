@@ -173,10 +173,14 @@ def RowJob():
         """Query the timesheet log and return a list of worker names currently clocked in."""
         try:
             result = cursor.execute(
-                "SELECT WorkerName, SUM(Signal) as total FROM WorkerTimeLog GROUP BY WorkerName")
+                "SELECT WorkerName, SUM(CAST(Signal AS REAL)) as total "
+                "FROM WorkerTimeLog GROUP BY WorkerName")
             rows = result.fetchall()
-            return [name for name, sig in rows if sig and float(sig) > 0]
-        except Exception:
+            logged_in = [name for name, sig in rows if sig is not None and float(sig) > 0]
+            print(f"[RowJob] Timesheet logged-in workers: {logged_in}")
+            return logged_in
+        except Exception as e:
+            print(f"[RowJob] ERROR querying WorkerTimeLog: {e}")
             return []
 
     def _get_row_logged_in_workers(field):
@@ -192,8 +196,11 @@ def RowJob():
                 return set()
             df['Signal'] = pd.to_numeric(df['Signal'], errors='coerce').fillna(0)
             grouped = df.groupby('Worker')['Signal'].sum().reset_index()
-            return set(grouped.loc[grouped['Signal'] >= 1, 'Worker'].tolist())
-        except Exception:
+            already = set(grouped.loc[grouped['Signal'] >= 1, 'Worker'].tolist())
+            print(f"[RowJob] Already on row for {field}: {already}")
+            return already
+        except Exception as e:
+            print(f"[RowJob] ERROR querying WorkerRowLog: {e}")
             return set()
 
     Signalq = 0
