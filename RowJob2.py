@@ -233,32 +233,18 @@ def RowJob():
         headings = list(headers)
         table_values = CurrentRowLogFilter.values.tolist()
 
-        # Build list of workers currently signed into this row (for Sign Out combo)
-        row_signed_in = CurrentRowLogFilter['Worker'].tolist() if not CurrentRowLogFilter.empty else []
-
         layoutB = [[sg.Text('Row Job Manager for %s' % Field, font=TITLE_FONT)],
                    [sg.Table(values=table_values, headings=headings, font=TABLE_FONT, auto_size_columns=True)],
-                   [sg.Text('Add Workers: bulk sign-in from timesheet', font=BODY_FONT)],
-                   [sg.Text('Sign Out: select worker & press Sign Out', font=BODY_FONT)],
-                   [sg.Text('Select Worker (for sign out)', font=BODY_FONT)],
-                   make_touch_combo_row('Select Worker', 'Worker'),
                    [sg.pin(sg.Button('Add Workers', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD,
                                      border_width=2, button_color=('white', 'DarkGreen'))),
-                    sg.pin(sg.Button('Sign Out', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
+                    sg.pin(sg.Button('Add All Workers', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD,
+                                     border_width=2, button_color=('white', 'DarkGreen'))),
                     sg.pin(sg.Button('Sign Out All', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2)),
                     sg.pin(sg.Button('Back', **back_kwargs)),
                     sg.pin(sg.Button('QA LOG', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE, pad=BTN_PAD, border_width=2))]]
 
-        # The combo is only used for sign-out, so populate with workers on this row
-        _combos_worker = {
-            'Worker': ('Select Worker', row_signed_in if row_signed_in else ['(no workers signed in)']),
-        }
         window = _make_window(layoutB)
-        while True:
-            event, values = window.read()
-            if handle_touch_combos(event, window, _combos_worker):
-                continue
-            break
+        event, values = window.read()
 
         # ── Back / Close ──────────────────────────────────────────────────
         if event in (sg.WIN_CLOSED, 'Back'):
@@ -266,7 +252,7 @@ def RowJob():
             Signalq = 1
             continue
 
-        # ── Add Workers (bulk sign-in) ────────────────────────────────────
+        # ── Add Workers (multi-select sign-in) ────────────────────────────
         if event == 'Add Workers':
             _safe_close(window)
 
@@ -287,15 +273,11 @@ def RowJob():
             # Open multi-select popup
             chosen = touch_multi_select('Select Workers to Sign In', sorted(available))
             if not chosen:
-                continue  # user cancelled or selected nothing
+                continue
 
-            # Write all chosen workers into the row log
             try:
                 TimeStamp = datetime.datetime.now()
-                rows_to_write = []
-                for w in chosen:
-                    rows_to_write.append(
-                        [Field, block_row, w, 'Start', TimeStamp, 1, Variety, JobType])
+                rows_to_write = [[Field, block_row, w, 'Start', TimeStamp, 1, Variety, JobType] for w in chosen]
                 bulk_df = pd.DataFrame(
                     rows_to_write,
                     columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
@@ -304,39 +286,29 @@ def RowJob():
                 _show_error(f'DB WRITE ERROR:\n{str(e)[:200]}')
             continue
 
-        # ── Helper: validate worker selection for sign out ────────────────
-        Worker = values.get('Worker', '--Select--') if values else '--Select--'
-
-        # ── Sign Out ──────────────────────────────────────────────────────
-        if event == 'Sign Out':
+        # ── Add All Workers (one-press sign-in everyone from timesheet) ───
+        if event == 'Add All Workers':
             _safe_close(window)
-            if Worker in ('--Select--', '', None, '(no workers signed in)'):
-                _show_error('PLEASE SELECT A WORKER')
-                continue
-            try:
-                WorkerCheckLog = cursor.execute(
-                    "SELECT * FROM WorkerRowLog WHERE Field = ? AND Worker = ?",
-                    (Field, Worker))
-                WorkerCheckLog = pd.DataFrame(
-                    WorkerCheckLog.fetchall(),
-                    columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
-                WorkerCheckLog = WorkerCheckLog[
-                    WorkerCheckLog['TimeStamp'].astype(str).str.contains(RE, regex=True, na=False)]
-                WorkerCheckLog['Signal'] = pd.to_numeric(WorkerCheckLog['Signal'], errors='coerce').fillna(0)
-                WorkerCheckSignal = WorkerCheckLog['Signal'].sum()
-            except Exception:
-                WorkerCheckSignal = 0
 
-            if WorkerCheckSignal <= 0:
-                _show_error('WORKER NOT LOGGED INTO ROW')
+            timesheet_workers = _get_timesheet_logged_in_workers()
+            if not timesheet_workers:
+                _show_error('NO WORKERS CLOCKED IN\nON THE TIMESHEET')
+                continue
+
+            already_on_row = _get_row_logged_in_workers(Field)
+            available = [w for w in timesheet_workers if w not in already_on_row]
+
+            if not available:
+                _show_error('ALL CLOCKED-IN WORKERS\nALREADY ON THIS ROW')
                 continue
 
             try:
                 TimeStamp = datetime.datetime.now()
-                RowLogDataFrame = pd.DataFrame(
-                    [[Field, block_row, Worker, 'Finish', TimeStamp, -1, Variety, JobType]],
+                rows_to_write = [[Field, block_row, w, 'Start', TimeStamp, 1, Variety, JobType] for w in available]
+                bulk_df = pd.DataFrame(
+                    rows_to_write,
                     columns=['Field', 'Row', 'Worker', 'Action', 'TimeStamp', 'Signal', 'Variety', 'Job_Type'])
-                RowLogDataFrame.to_sql('WorkerRowLog', con=engine, if_exists='append', index=False)
+                bulk_df.to_sql('WorkerRowLog', con=engine, if_exists='append', index=False)
             except Exception as e:
                 _show_error(f'DB WRITE ERROR:\n{str(e)[:200]}')
             continue
