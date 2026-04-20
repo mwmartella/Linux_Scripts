@@ -170,13 +170,15 @@ def RowJob():
     block_row = block_info.get("Row", "Unknown")
 
     def _get_timesheet_logged_in_workers():
-        """Query the timesheet log and return a list of worker names currently clocked in."""
+        """Query the timesheet log and return a list of worker names currently clocked in.
+        Uses the same pattern as the working Status Report in TimeLog.py."""
         try:
-            result = cursor.execute(
-                "SELECT WorkerName, SUM(CAST(Signal AS REAL)) as total "
-                "FROM WorkerTimeLog GROUP BY WorkerName")
-            rows = result.fetchall()
-            logged_in = [name for name, sig in rows if sig is not None and float(sig) > 0]
+            query = cursor.execute(
+                "SELECT WorkerName, SUM(Signal) FROM WorkerTimeLog GROUP BY WorkerName;")
+            df = pd.DataFrame(query, columns=['Name', 'Signal'])
+            # Drop workers whose signal sums to 0 (signed out) — same logic as Status Report
+            df = df.drop(df[df.Signal == 0].index)
+            logged_in = df['Name'].tolist()
             print(f"[RowJob] Timesheet logged-in workers: {logged_in}")
             return logged_in
         except Exception as e:
