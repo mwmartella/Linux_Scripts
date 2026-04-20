@@ -197,7 +197,7 @@ def RowJob():
                        [sg.Text(f'{Field}  |  {Variety}  |  {JobType}', font=HEADER_FONT)],
                        [sg.Table(values=table_values, headings=headings,
                                  font=TABLE_FONT, auto_size_columns=True,
-                                 num_rows=min(10, max(3, len(table_values))))],
+                                 num_rows=15)],
                        [sg.pin(sg.Button('Add Workers',     font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE,
                                          pad=BTN_PAD, border_width=2, button_color=('white', 'DarkGreen'))),
                         sg.pin(sg.Button('Add All Workers', font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE,
