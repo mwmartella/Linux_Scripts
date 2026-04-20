@@ -92,6 +92,65 @@ def make_touch_combo_row(label, key, default='--Select--', display_size=30):
     ]
 
 
+def touch_multi_select(title, items, font=("Sans", 16, "bold"), size=(50, 12)):
+    """
+    Opens a fullscreen popup with a scrollable listbox allowing MULTIPLE
+    selections.  Returns a list of selected item strings, or [] if cancelled.
+    """
+    layout = [
+        [sg.Text(title, font=font)],
+        [sg.Text('Tap workers to highlight, then press OK', font=("Sans", 12, "bold"))],
+        [sg.Input('', key='-FILTER-', font=font, enable_events=True,
+                  size=(size[0], 1), tooltip='Type to filter')],
+        [sg.Listbox(items, key='-LIST-', font=font, size=size,
+                    select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE,
+                    enable_events=False, bind_return_key=True)],
+        [sg.Button('Select All', font=font, size=(14, 2), border_width=2),
+         sg.Button('OK', font=font, size=(12, 2), border_width=2),
+         sg.Button('Cancel', font=font, size=(12, 2), border_width=2,
+                   button_color=('white', 'firebrick3'))],
+    ]
+    window = sg.Window(title, layout, finalize=True, resizable=True,
+                       modal=True, keep_on_top=True)
+    window.Maximize()
+
+    # Make scrollbars wider for touch
+    try:
+        listbox_widget = window['-LIST-'].Widget
+        listbox_widget.config(width=size[0])
+        for child in listbox_widget.master.winfo_children():
+            if child.winfo_class() == 'Scrollbar':
+                child.config(width=80)
+    except Exception:
+        pass
+
+    all_items = list(items)
+    selected = []
+
+    while True:
+        event, values = window.read()
+
+        if event in (sg.WIN_CLOSED, 'Cancel'):
+            break
+
+        if event == '-FILTER-':
+            filter_text = values['-FILTER-'].lower()
+            filtered = [i for i in all_items if filter_text in str(i).lower()]
+            window['-LIST-'].update(filtered)
+
+        if event == 'Select All':
+            # Select every item currently visible in the listbox
+            current = window['-LIST-'].get_list_values()
+            window['-LIST-'].update(set_to_index=list(range(len(current))))
+
+        if event == 'OK':
+            selected = list(values['-LIST-']) if values['-LIST-'] else []
+            break
+
+    window.close()
+    return selected
+
+
 def handle_touch_combos(event, window, combos_config):
     """
     Call this right after window.read(). Checks if a Select button was
