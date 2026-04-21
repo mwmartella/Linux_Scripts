@@ -37,9 +37,11 @@ def AppleQAInput():
     Date       = datetime.datetime.today().strftime('%Y-%m-%d')
 
     TITLE_FONT = ("Sans", 20, "bold")
+    HEADER_FONT= ("Sans", 16, "bold")
     BTN_FONT   = ("Sans", 14, "bold")
     BTN_SIZE   = (22, 2)
     BTN_PAD    = (8, 5)
+    TABLE_FONT = ("Sans", 12, "bold")
     COMBO_FONT = ("Sans", 14, "bold")
     STAT_FONT  = ("Sans", 18, "bold")
     WARN_FONT  = ("Sans", 22, "bold")
@@ -69,21 +71,54 @@ def AppleQAInput():
     defect_lower = _var('Defect Lower Limit')
     defect_upper = _var('Defect Upper Limit')
 
-    # ── Load reference data ───────────────────────────────────────────────
+    # ── Timesheet DB (source of active jobs + workers) ────────────────────
+    ts_db_path = BASE_PATH + f'{CompName} TimeSheetLocal.db'
     try:
-        variety_list = pd.read_excel(BASE_PATH + 'BlockData/VARIETY.xlsx')['VARIETY'].tolist()
-        field_list   = ['WISHARTS - PL','WISHARTS - BRAVO','CHERRYS','CHERRY BRAVO',
-                        'S-SHED','STK','P-BELLE','LIR','ROB BRAVO','MODI','DWF','GSPL','TOTAL']
-        crew_list    = ['SR1','SR2','SR3','SR4','SR5','SR6','Mark']
+        ts_connect = sqlite3.connect(ts_db_path)
+        ts_cursor  = ts_connect.cursor()
     except Exception as e:
-        sg.popup_error(f'Could not load reference data:\n{e}', title='Apple QA Error', font=WARN_FONT)
+        sg.popup_error(f'Could not connect to timesheet database:\n{e}', title='Apple QA Error', font=WARN_FONT)
         return
 
-    # ── Database ──────────────────────────────────────────────────────────
-    db_path = BASE_PATH + f'{CompName} AppleLog.db'
+    def _get_active_jobs():
+        """Return list of dicts {Field, Variety, Job_Type, Workers} with at least 1 signed-in worker today."""
+        try:
+            q = ts_cursor.execute(
+                "SELECT Field, Variety, Job_Type, Worker, SUM(Signal) as Signal "
+                "FROM WorkerRowLog WHERE TimeStamp LIKE ? "
+                "GROUP BY Field, Variety, Job_Type, Worker;",
+                (Date + '%',))
+            df = pd.DataFrame(q, columns=['Field', 'Variety', 'Job_Type', 'Worker', 'Signal'])
+            if df.empty:
+                return []
+            df = df[df['Signal'] > 0]
+            if df.empty:
+                return []
+            grouped = df.groupby(['Field', 'Variety', 'Job_Type'])['Worker'].count().reset_index()
+            grouped.columns = ['Field', 'Variety', 'Job_Type', 'Workers']
+            return grouped.to_dict('records')
+        except Exception:
+            return []
+
+    def _get_active_workers(field, variety):
+        """Return list of worker names currently signed in on a specific field/variety today."""
+        try:
+            q = ts_cursor.execute(
+                "SELECT Worker, SUM(Signal) as Signal FROM WorkerRowLog "
+                "WHERE Field = ? AND Variety = ? AND TimeStamp LIKE ? "
+                "GROUP BY Worker;",
+                (field, variety, Date + '%'))
+            df = pd.DataFrame(q, columns=['Worker', 'Signal'])
+            df = df[df['Signal'] > 0]
+            return df['Worker'].tolist()
+        except Exception:
+            return []
+
+    # ── Apple QA DB ───────────────────────────────────────────────────────
+    qa_db_path = BASE_PATH + f'{CompName} AppleLog.db'
     try:
-        engine      = create_engine("sqlite:///" + db_path)
-        sql_connect = sqlite3.connect(db_path)
+        engine      = create_engine("sqlite:///" + qa_db_path)
+        sql_connect = sqlite3.connect(qa_db_path)
         cursor      = sql_connect.cursor()
         cursor.execute(f"CREATE TABLE IF NOT EXISTS QA ({', '.join([c + ' TEXT' for c in QA_COLS])})")
         sql_connect.commit()
@@ -91,43 +126,68 @@ def AppleQAInput():
         sg.popup_error(f'Could not connect to Apple QA database:\n{e}', title='Apple QA Error', font=WARN_FONT)
         return
 
-    # ── SCREEN 1: Field + Variety ─────────────────────────────────────────
-    layout = [
-        [sg.Text('Apple QA', font=TITLE_FONT)],
-        [sg.Text('Select Field', font=BTN_FONT)],
-        [sg.Combo(field_list, default_value='Select Field', size=35, key='Field', font=COMBO_FONT)],
-        [sg.Text('Select Variety', font=BTN_FONT)],
-        [sg.Combo(variety_list, default_value='Select Variety', size=35, key='Variety', font=COMBO_FONT)],
-        [sg.Button('NEXT', **btn_kwargs), sg.Button('BACK', **back_kwargs)],
-    ]
-    win = _win(layout)
-    ev, vals = win.read()
-    win.close()
-    if ev in (sg.WIN_CLOSED, 'BACK'):
-        return
-    selected_field   = vals['Field']
-    selected_variety = vals['Variety']
-
-    # ── CREW LOOP ─────────────────────────────────────────────────────────
+    # ── SCREEN 1: Select active job ───────────────────────────────────────
     while True:
+        active_jobs = _get_active_jobs()
+        if not active_jobs:
+            sg.popup('No active row jobs found for today.\nStart a row job first.', title='Apple QA', font=WARN_FONT)
+            return
+
+        table_rows = [[j['Field'], j['Variety'], j['Job_Type'], j['Workers']] for j in active_jobs]
         layout = [
-            [sg.Text('SELECT CREW', font=TITLE_FONT)],
-            [sg.Button(c, **btn_kwargs) for c in crew_list],
-            [sg.Button('BACK', **back_kwargs)],
+            [sg.Text('Apple QA', font=TITLE_FONT)],
+            [sg.Text('Select Active Job', font=HEADER_FONT)],
+            [sg.Table(values=table_rows,
+                      headings=['Field', 'Variety', 'Job Type', 'Workers'],
+                      font=TABLE_FONT, auto_size_columns=True, num_rows=7,
+                      key='-JOB_TABLE-', select_mode=sg.TABLE_SELECT_MODE_BROWSE,
+                      justification='center')],
+            [sg.Button('SELECT', **btn_kwargs), sg.Button('BACK', **back_kwargs)],
         ]
+        win = _win(layout)
+        ev, vals = win.read()
+        win.close()
+        if ev in (sg.WIN_CLOSED, 'BACK'):
+            return
+
+        selected_rows = vals.get('-JOB_TABLE-', [])
+        if not selected_rows:
+            sg.popup('Please select a job from the table.', title='Apple QA', font=BTN_FONT)
+            continue
+
+        job = active_jobs[selected_rows[0]]
+        selected_field   = job['Field']
+        selected_variety = job['Variety']
+        break
+
+    # ── WORKER LOOP ───────────────────────────────────────────────────────
+    while True:
+        worker_list = _get_active_workers(selected_field, selected_variety)
+        if not worker_list:
+            sg.popup(f'No active workers found on\n{selected_field} / {selected_variety}', title='Apple QA', font=WARN_FONT)
+            return
+
+        worker_buttons = [sg.Button(w, **btn_kwargs) for w in worker_list]
+        # Split into rows of 3 for readability
+        worker_rows = [worker_buttons[i:i+3] for i in range(0, len(worker_buttons), 3)]
+
+        layout = [[sg.Text('SELECT WORKER', font=TITLE_FONT)],
+                  [sg.Text(f'{selected_field}  |  {selected_variety}', font=HEADER_FONT)],
+                  *worker_rows,
+                  [sg.Button('BACK', **back_kwargs)]]
         win = _win(layout)
         ev, _ = win.read()
         win.close()
         if ev in (sg.WIN_CLOSED, 'BACK'):
             return
-        crew = ev
+        worker = ev
 
-        # Load today's stats for this crew
+        # Load today's QA stats for this worker
         try:
             raw   = cursor.execute("SELECT * FROM QA")
             qa_df = pd.DataFrame(raw, columns=QA_COLS)
             qa_df = qa_df[qa_df['TimeStamp'].str.contains(Date, na=False)]
-            qa_df = qa_df[qa_df['CheckID'].str.contains(crew, na=False)]
+            qa_df = qa_df[qa_df['CheckID'].str.contains(worker, na=False)]
             for col in QA_COLS[3:]:
                 qa_df[col] = pd.to_numeric(qa_df[col], errors='coerce')
             total_fruit = qa_df['FruitChecked'].sum() or 1
@@ -147,14 +207,15 @@ def AppleQAInput():
         MD, MD_C = stats['MD']
 
         layout = [
-            [sg.Text(f'{crew}  —  Apple QA', font=TITLE_FONT)],
+            [sg.Text(f'{worker}  —  Apple QA', font=TITLE_FONT)],
+            [sg.Text(f'{selected_field}  |  {selected_variety}', font=HEADER_FONT)],
             [sg.Combo(['Bin #']+list(range(1,26)), default_value='Bin #', size=15, key='BinLog', font=COMBO_FONT),
              sg.Combo(['Fruit Checked',5,10,15,20], default_value='Fruit Checked', size=22, key='AMT', font=COMBO_FONT)],
             row1, row2,
             [sg.Combo(['Insect']+list(range(1,11)), default_value='Insect', size=15, key='Insect', font=COMBO_FONT)],
             [sg.Button('LOG', **btn_kwargs), sg.Button('BACK', **back_kwargs)],
             [sg.HorizontalSeparator()],
-            [sg.Text("TODAY'S CREW STATS", font=BTN_FONT)],
+            [sg.Text("TODAY'S STATS FOR THIS WORKER", font=BTN_FONT)],
             [sg.Text(f'Bruise New={int(BN)}%', font=STAT_FONT, text_color=BN_C),
              sg.Text(f'Bruise Old={int(BO)}%', font=STAT_FONT, text_color=BO_C)],
             [sg.Text(f'Sunburn={int(SB)}%',    font=STAT_FONT, text_color=SB_C),
@@ -169,14 +230,14 @@ def AppleQAInput():
         win.close()
 
         if ev in (sg.WIN_CLOSED, 'BACK'):
-            continue  # back to crew selection
+            continue  # back to worker selection
 
         if ev == 'LOG':
             def _iv(k):
                 try:    return int(vals[k])
                 except: return 0
 
-            bin_code = f"{crew}{Date.replace('-','')}{vals['BinLog']}"
+            bin_code = f"{worker}{Date.replace('-','')}{vals['BinLog']}"
             amt      = _iv('AMT') or 10
             bo, bn, sb = _iv('Bruise-Old'), _iv('Bruise-New'), _iv('Sunburn')
             cl, md, hl = _iv('Colour'), _iv('Misc Damage'), _iv('Hail')
@@ -197,6 +258,7 @@ def AppleQAInput():
             s = _compute_stats(new_df, amt, defect_lower, defect_upper)
             layout = [
                 [sg.Text('THIS CHECK — STATS', font=TITLE_FONT)],
+                [sg.Text(f'{worker}  |  {selected_field}  |  {selected_variety}', font=HEADER_FONT)],
                 [sg.Text(f'Bruise New={int(s["BN"][0])}%',    font=STAT_FONT, text_color=s['BN'][1])],
                 [sg.Text(f'Bruise Old={int(s["BO"][0])}%',    font=STAT_FONT, text_color=s['BO'][1])],
                 [sg.Text(f'Sunburn={int(s["SB"][0])}%',       font=STAT_FONT, text_color=s['SB'][1])],
@@ -209,5 +271,4 @@ def AppleQAInput():
             win = _win(layout)
             win.read()
             win.close()
-            # Loop back to crew selection for next check
-
+            # Loop back to worker selection for next check
