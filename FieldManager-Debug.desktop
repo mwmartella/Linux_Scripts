@@ -2,9 +2,8 @@
 Type=Application
 Name=Field Manager (Debug)
 Comment=MWSS Field Manager - Debug mode with terminal output
-Exec=/home/super1/Documents/Linux_Scripts/run_field_manager.sh
-Path=/home/super1/Documents/Linux_Scripts
+Exec=$HOME/Documents/Linux_Scripts/run_field_manager.sh
+Path=$HOME/Documents/Linux_Scripts
 Terminal=true
 Icon=utilities-terminal
 Categories=Office;
-
