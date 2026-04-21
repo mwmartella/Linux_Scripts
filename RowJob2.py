@@ -70,8 +70,9 @@ def RowJob():
 
     # ── Database setup ────────────────────────────────────────────────────
     BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
-    DB1 = "sqlite:///" + BASE_PATH + "SUPER2 TimeSheetLocal.db"
-    DB2 = BASE_PATH + "SUPER2 TimeSheetLocal.db"
+    CompName = platform.node()
+    DB1 = "sqlite:///" + BASE_PATH + f"{CompName} TimeSheetLocal.db"
+    DB2 = BASE_PATH + f"{CompName} TimeSheetLocal.db"
     Day = datetime.datetime.now().strftime('%Y-%m-%d')
 
     try:

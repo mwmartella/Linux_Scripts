@@ -6,6 +6,7 @@ import datetime
 import sys
 import textwrap
 from touch_helpers import make_touch_combo_row, handle_touch_combos
+import platform
 
 FieldList = ['WISHARTS - PL', 'WISHARTS - BRAVO', 'CHERRYS', 'CHERRY BRAVO', 'S-SHED', 'STK', 'P-BELLE', 'LIR', 'ROB BRAVO', 'MODI', 'DWF', 'GSPL', 'TOTAL']
 BlockDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/BlockData/BLOCKDATA.xlsx')
@@ -20,9 +21,10 @@ QACHECKLIST = ['All Good', 'Missed Work - Sent Back', 'Work Too Heavy', 'Work To
 JobTypeList = ['Picking', 'Pruning', 'Thinning', 'Establish Planting', 'Tree Training', 'Packing', 'Irrigation Maintinance']
 
 BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
+CompName = platform.node()
 
-engine = create_engine("sqlite:///" + BASE_PATH + "SUPER2 TimeSheetLocal.db") 
-sql_connect = sqlite3.connect(BASE_PATH + 'SUPER2 TimeSheetLocal.db')
+engine = create_engine("sqlite:///" + BASE_PATH + f"{CompName} TimeSheetLocal.db") 
+sql_connect = sqlite3.connect(BASE_PATH + f'{CompName} TimeSheetLocal.db')
 cursor = sql_connect.cursor()
 
 engine2 = create_engine("sqlite:///" + BASE_PATH + "RowJobQa.db") 

@@ -33,8 +33,8 @@ WARN_FONT = ("Sans", 22, "bold")
 CompName = platform.node()
 print(CompName)
 BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
-DB1 = "sqlite:///" + BASE_PATH + "SUPER2 TimeSheetLocal.db"
-DB2 = BASE_PATH + "SUPER2 TimeSheetLocal.db"
+DB1 = "sqlite:///" + BASE_PATH + f"{CompName} TimeSheetLocal.db"
+DB2 = BASE_PATH + f"{CompName} TimeSheetLocal.db"
 SignalDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SPLITSIGNAL.xlsx')
 WorkerReasonList = ['Worker Sick', 'Worker Late', 'Worker No Longer Employed']
 def TimeLog():
