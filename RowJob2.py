@@ -10,6 +10,7 @@ def RowJob():
     import platform
     import re
     import json
+    from pathlib import Path
     from touch_helpers import make_touch_combo_row, handle_touch_combos, touch_multi_select
 
     sg.theme('DarkBlue3')
@@ -53,7 +54,7 @@ def RowJob():
             pass
 
     # ── Load JSON config ──────────────────────────────────────────────────
-    json_path = '/home/super1/OneDrive/~FARM DATA/Timesheet App/ACTIVITYLOG.json'
+    json_path = str(Path.home() / 'OneDrive' / '~FARM DATA' / 'Timesheet App' / 'ACTIVITYLOG.json')
     try:
         with open(json_path, 'r') as json_file:
             data = json.load(json_file)
@@ -69,7 +70,7 @@ def RowJob():
         return None
 
     # ── Database setup ────────────────────────────────────────────────────
-    BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
+    BASE_PATH = str(Path.home() / 'OneDrive' / '~FARM DATA' / 'Timesheet App') + '/'
     CompName = platform.node()
     DB1 = "sqlite:///" + BASE_PATH + f"{CompName} TimeSheetLocal.db"
     DB2 = BASE_PATH + f"{CompName} TimeSheetLocal.db"

@@ -7,21 +7,23 @@ import sys
 import textwrap
 from touch_helpers import make_touch_combo_row, handle_touch_combos
 import platform
+from pathlib import Path
+
+BASE_PATH = str(Path.home() / 'OneDrive' / '~FARM DATA' / 'Timesheet App') + '/'
+CompName = platform.node()
 
 FieldList = ['WISHARTS - PL', 'WISHARTS - BRAVO', 'CHERRYS', 'CHERRY BRAVO', 'S-SHED', 'STK', 'P-BELLE', 'LIR', 'ROB BRAVO', 'MODI', 'DWF', 'GSPL', 'TOTAL']
-BlockDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/BlockData/BLOCKDATA.xlsx')
-SuperDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SUPERVISORS.xlsx')
-CasualDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/CASUAL STAFF.xlsx')
-MachinesDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/MACHINES.xlsx')
-VarietyDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/BlockData/VARIETY.xlsx')
+BlockDataFrame = pd.read_excel(BASE_PATH + 'BlockData/BLOCKDATA.xlsx')
+SuperDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/SUPERVISORS.xlsx')
+CasualDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/CASUAL STAFF.xlsx')
+MachinesDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/MACHINES.xlsx')
+VarietyDataFrame = pd.read_excel(BASE_PATH + 'BlockData/VARIETY.xlsx')
 VarietyList = VarietyDataFrame['VARIETY'].tolist()
 
 
 QACHECKLIST = ['All Good', 'Missed Work - Sent Back', 'Work Too Heavy', 'Work Too Light', 'Worker Issues']
 JobTypeList = ['Picking', 'Pruning', 'Thinning', 'Establish Planting', 'Tree Training', 'Packing', 'Irrigation Maintinance']
 
-BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
-CompName = platform.node()
 
 engine = create_engine("sqlite:///" + BASE_PATH + f"{CompName} TimeSheetLocal.db") 
 sql_connect = sqlite3.connect(BASE_PATH + f'{CompName} TimeSheetLocal.db')

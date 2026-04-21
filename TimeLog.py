@@ -14,6 +14,7 @@ import datetime
 import sys
 import textwrap
 import platform
+from pathlib import Path
 from touch_helpers import make_touch_combo_row, handle_touch_combos
 
 sg.theme('DarkBlue3')
@@ -32,10 +33,10 @@ WARN_FONT = ("Sans", 22, "bold")
 #Start Up Database engines....... Vroom
 CompName = platform.node()
 print(CompName)
-BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
+BASE_PATH = str(Path.home() / 'OneDrive' / '~FARM DATA' / 'Timesheet App') + '/'
 DB1 = "sqlite:///" + BASE_PATH + f"{CompName} TimeSheetLocal.db"
 DB2 = BASE_PATH + f"{CompName} TimeSheetLocal.db"
-SignalDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SPLITSIGNAL.xlsx')
+SignalDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/SPLITSIGNAL.xlsx')
 WorkerReasonList = ['Worker Sick', 'Worker Late', 'Worker No Longer Employed']
 def TimeLog():
     if CompName == "SuperTwo":
@@ -51,10 +52,10 @@ def TimeLog():
     sql_connect2 = sqlite3.connect(BASE_PATH + 'TimeSheetGlobal.db')
     cursor2 = sql_connect.cursor()
     #Compile DataFrames
-    SuperDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/SUPERVISORS.xlsx')
-    CasualDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/CASUAL STAFF.xlsx')
-    MachineDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/MACHINES.xlsx')
-    RatesDataFrame = pd.read_excel('/home/super1/OneDrive/~FARM DATA/Timesheet App/WORKER DATA/PAYRATES.xlsx')
+    SuperDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/SUPERVISORS.xlsx')
+    CasualDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/CASUAL STAFF.xlsx')
+    MachineDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/MACHINES.xlsx')
+    RatesDataFrame = pd.read_excel(BASE_PATH + 'WORKER DATA/PAYRATES.xlsx')
     #Global Variable, Lists and Dicts
     #JobTypeList = ['Picking', 'Pruning', 'Thinning', 'Establish Planting', 'Tree Training', 'Packing', 'Irrigation Maintinance']
     #JobTypeDict = {'Picking': 'PK', 'Pruning': 'PR', 'Thinning': 'TH', 'Establish Planting': 'EP', 'Tree Training': 'TT', 'Packing': 'PA', 'Irrigation Maintinance': 'IM'}

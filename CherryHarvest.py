@@ -8,6 +8,7 @@ import textwrap
 import RowJob
 import re
 import platform
+from pathlib import Path
 from touch_helpers import make_touch_combo_row, handle_touch_combos
 
 sg.theme('DarkBlue3')
@@ -35,7 +36,7 @@ btn_kwargs = dict(font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD, border_width=2)
 back_kwargs = dict(font=BTN_FONT, size=(12, 1), pad=BTN_PAD, button_color=('white', 'firebrick3'), border_width=2)
 
 def CherryHarvest():
-    BASE_PATH = '/home/super1/OneDrive/~FARM DATA/Timesheet App/'
+    BASE_PATH = str(Path.home() / 'OneDrive' / '~FARM DATA' / 'Timesheet App') + '/'
     CompName = platform.node()
     print(CompName)
     DB1 = "sqlite:///" + BASE_PATH + f"{CompName} CherryLog.db"
