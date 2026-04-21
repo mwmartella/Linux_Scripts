@@ -167,20 +167,22 @@ def AppleQAInput():
             sg.popup(f'No active workers found on\n{selected_field} / {selected_variety}', title='Apple QA', font=WARN_FONT)
             return
 
-        worker_buttons = [sg.Button(w, **btn_kwargs) for w in worker_list]
-        # Split into rows of 3 for readability
-        worker_rows = [worker_buttons[i:i+3] for i in range(0, len(worker_buttons), 3)]
-
         layout = [[sg.Text('SELECT WORKER', font=TITLE_FONT)],
                   [sg.Text(f'{selected_field}  |  {selected_variety}', font=HEADER_FONT)],
-                  *worker_rows,
-                  [sg.Button('BACK', **back_kwargs)]]
+                  [sg.Listbox(values=worker_list, size=(35, min(len(worker_list), 10)),
+                              font=COMBO_FONT, key='-WORKER-', enable_events=False,
+                              select_mode=sg.LISTBOX_SELECT_MODE_SINGLE)],
+                  [sg.Button('SELECT', **btn_kwargs), sg.Button('BACK', **back_kwargs)]]
         win = _win(layout)
-        ev, _ = win.read()
+        ev, vals = win.read()
         win.close()
         if ev in (sg.WIN_CLOSED, 'BACK'):
             return
-        worker = ev
+        selected_worker = vals.get('-WORKER-', [])
+        if not selected_worker:
+            sg.popup('Please select a worker from the list.', title='Apple QA', font=BTN_FONT)
+            continue
+        worker = selected_worker[0]
 
         # Load today's QA stats for this worker
         try:
