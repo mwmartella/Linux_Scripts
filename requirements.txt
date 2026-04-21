@@ -3,3 +3,5 @@ pandas>=1.5,<3
 FreeSimpleGUI>=5.0
 openpyxl>=3.1
 
+# NOTE: tkinter is NOT pip-installable — install via system package manager:
+# sudo apt-get install python3-tk

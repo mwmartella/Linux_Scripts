@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/run_field_manager.sh">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/run_field_manager.sh" />
+              <option name="originalContent" value="#!/usr/bin/env bash&#10;set -e&#10;&#10;# Resolve the directory this script lives in, regardless of where it's called from&#10;APP_DIR=&quot;$(cd &quot;$(dirname &quot;$0&quot;)&quot; &amp;&amp; pwd)&quot;&#10;cd &quot;$APP_DIR&quot;&#10;&#10;# Activate the local venv so all dependencies are available&#10;source &quot;$APP_DIR/venv/bin/activate&quot;&#10;&#10;python3 -u MWSS_Field_Manager.py&#10;" />
+              <option name="updatedContent" value="#!/usr/bin/env bash&#10;&#10;# Resolve the directory this script lives in, regardless of where it's called from&#10;APP_DIR=&quot;$(cd &quot;$(dirname &quot;$0&quot;)&quot; &amp;&amp; pwd)&quot;&#10;cd &quot;$APP_DIR&quot;&#10;&#10;LOG=&quot;$APP_DIR/field_manager.log&quot;&#10;echo &quot;=== $(date) ===&quot; &gt;&gt; &quot;$LOG&quot;&#10;echo &quot;APP_DIR: $APP_DIR&quot; &gt;&gt; &quot;$LOG&quot;&#10;&#10;# Activate the local venv if it exists, otherwise fall back to system python3&#10;if [ -f &quot;$APP_DIR/venv/bin/activate&quot; ]; then&#10;    source &quot;$APP_DIR/venv/bin/activate&quot;&#10;    echo &quot;venv activated&quot; &gt;&gt; &quot;$LOG&quot;&#10;else&#10;    echo &quot;WARNING: venv not found at $APP_DIR/venv — using system python3&quot; &gt;&gt; &quot;$LOG&quot;&#10;    echo &quot;To create it run:  python3 -m venv $APP_DIR/venv &amp;&amp; $APP_DIR/venv/bin/pip install -r $APP_DIR/requirements.txt&quot;&#10;fi&#10;&#10;python3 -u MWSS_Field_Manager.py &gt;&gt; &quot;$LOG&quot; 2&gt;&amp;1&#10;EXIT_CODE=$?&#10;&#10;if [ $EXIT_CODE -ne 0 ]; then&#10;    echo &quot;ERROR: MWSS_Field_Manager.py exited with code $EXIT_CODE&quot; &gt;&gt; &quot;$LOG&quot;&#10;    # Show a visible error popup so it doesn't silently disappear&#10;    which zenity &amp;&gt;/dev/null &amp;&amp; zenity --error --text=&quot;Field Manager crashed (exit $EXIT_CODE).\nSee log:\n$LOG&quot; --title=&quot;Field Manager Error&quot;&#10;fi" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
