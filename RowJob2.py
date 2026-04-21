@@ -316,7 +316,11 @@ def RowJob():
             # ── QA LOG ────────────────────────────────────────────────────
             if event == 'QA LOG':
                 _safe_close(window)
-                _show_error('QA LOG NOT YET IMPLEMENTED')
+                try:
+                    from AppleQAInput import AppleQAInput
+                    AppleQAInput()
+                except Exception as e:
+                    _show_error(f'Apple QA Error:\n{str(e)[:300]}')
                 continue
 
             _safe_close(window)

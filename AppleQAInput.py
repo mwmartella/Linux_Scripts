@@ -1,545 +1,213 @@
-from sqlalchemy import create_engine
-import sqlite3
-import pandas as pd
-import PySimpleGUI as sg
-import datetime
-import sys
-import textwrap
-import RowJob
-import re
 import platform
-from random import randrange
-from scipy.spatial import distance as dist
-from imutils import perspective
-from imutils import contours
+import datetime
+import sqlite3
 import numpy as np
-import argparse
-import imutils
-import cv2
-import numpy as np
-from matplotlib import pyplot as plt
-import os
-import shutil
-import AppleQA
-global SizeList
-CompName = platform.node()
-print(CompName)
-DB1 = "sqlite:///%sAppleLog.db" % CompName
-DB2 = "%sAppleLog.db" % CompName
-engine = create_engine(DB1) 
-sql_connect = sqlite3.connect(DB2)
-cursor = sql_connect.cursor()
-FieldList = ['WISHARTS - PL', 'WISHARTS - BRAVO', 'CHERRYS', 'CHERRY BRAVO', 'S-SHED', 'STK', 'P-BELLE', 'LIR', 'ROB BRAVO', 'MODI', 'DWF', 'GSPL', 'TOTAL']
-CrewList = ['SR1', 'SR2', 'SR3', 'SR4', 'SR5', 'SR6', 'Mark']
-BlockDataFrame = pd.read_excel('BlockData\\BLOCKDATA.xlsx')
-SuperDataFrame = pd.read_excel('Worker Data\\SUPERVISORS.xlsx')
-CasualDataFrame = pd.read_excel('Worker Data\\CASUAL STAFF.xlsx')
-MachinesDataFrame = pd.read_excel('Worker Data\\MACHINES.xlsx')
-VarietyDataFrame = pd.read_excel('BlockData\\VARIETY.xlsx')
-FixedTimes = pd.read_excel('Worker Data\\FIXEDTIMES.xlsx')
-WorkerList = CasualDataFrame['Worker Name'].tolist()
-VarietyList = VarietyDataFrame['VARIETY'].tolist()
-Date2 = datetime.datetime.today()
-Date = Date2.strftime('%Y-%m-%d')
-DefectCountList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-DefectList = ['Bruise-Old', 'Bruise-New', 'Sunburn']
-DefectList2 = ['Colour', 'Misc Damage', 'Hail']
-print(Date)
-VariableTimes = pd.read_excel('Worker Data\\HarvestQAVariables.xlsx')
-DefectUpperLimit = VariableTimes.loc[VariableTimes['Class'] == 'Defect Upper Limit']
-DefectUpperLimit = float(DefectUpperLimit['Variable'].tolist()[0])
-DefectLowerLimit = VariableTimes.loc[VariableTimes['Class'] == 'Defect Lower Limit']
-DefectLowerLimit = float(DefectLowerLimit['Variable'].tolist()[0])
-SizeUpperLimit = VariableTimes.loc[VariableTimes['Class'] == 'Size Upper Limit']
-SizeUpperLimit = float(SizeUpperLimit['Variable'].tolist()[0])
-SizeLowerLimit = VariableTimes.loc[VariableTimes['Class'] == 'Size Lower Limit']
-SizeLowerLimit = float(SizeLowerLimit['Variable'].tolist()[0])
-CameraURL = VariableTimes.loc[VariableTimes['Class'] == CompName]
-CameraURL = CameraURL['Variable'].tolist()[0]
-print(CameraURL)
+import pandas as pd
+import FreeSimpleGUI as sg
+from sqlalchemy import create_engine
+from pathlib import Path
 
 
-def AppleSize():
-    global SizeList
-    print('InLoop')
-    CompName = platform.node()
-    print(CompName)
-    DB1 = "sqlite:///%sAppleLog.db" % CompName
-    DB2 = "%sAppleLog.db" % CompName
-    engine = create_engine(DB1) 
-    sql_connect = sqlite3.connect(DB2)
-    cursor = sql_connect.cursor()
-    FieldList = ['WISHARTS - PL', 'WISHARTS - BRAVO', 'CHERRYS', 'CHERRY BRAVO', 'S-SHED', 'STK', 'P-BELLE', 'LIR', 'ROB BRAVO', 'MODI', 'DWF', 'GSPL', 'TOTAL']
-    BlockDataFrame = pd.read_excel('BlockData\\BLOCKDATA.xlsx')
-    SuperDataFrame = pd.read_excel('Worker Data\\SUPERVISORS.xlsx')
-    CasualDataFrame = pd.read_excel('Worker Data\\CASUAL STAFF.xlsx')
-    MachinesDataFrame = pd.read_excel('Worker Data\\MACHINES.xlsx')
-    VarietyDataFrame = pd.read_excel('BlockData\\VARIETY.xlsx')
-    FixedTimes = pd.read_excel('Worker Data\\FIXEDTIMES.xlsx')
-    WorkerList = CasualDataFrame['Worker Name'].tolist()
-    VarietyList = VarietyDataFrame['VARIETY'].tolist()
-    Date2 = datetime.datetime.today()
-    Date = Date2.strftime('%Y-%m-%d')
-    print(Date)
-    REDate = re.compile(Date + " [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]")
-    maxval = 255
-    thresh = 128
-    totalsizelists = []
-    PhotoDir = CameraURL
-    DirList = os.listdir(PhotoDir)
-    print(DirList)
-    DirList.remove('desktop.ini')
-    PhotoDir = DirList[-1]
-    PhotoDir = CameraURL + PhotoDir
-    print(PhotoDir)
-    def convert_binary(image_matrix, thresh_val):
-        white = 255
-        black = 0
-
-        initial_conv = np.where((image_matrix <= thresh_val), image_matrix, white)
-        final_conv = np.where((initial_conv > thresh_val), initial_conv, black)
-
-        return final_conv
+def _colour_for(value, lower, upper):
+    if value <= lower:   return 'lime green'
+    if value <= upper:   return 'yellow'
+    return 'tomato2'
 
 
-    def midpoint(ptA, ptB):
-        return ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
-        # construct the argument parse and parse the arguments
-    ap = argparse.ArgumentParser()
-    args = vars(ap.parse_args())
-    # load the image, convert it to grayscale, and blur it slightly
-    image = cv2.imread(PhotoDir)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    gray = cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY)
-    (thresh, im_bw) = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    smooth = cv2.GaussianBlur(im_bw, (205, 205), 0)
-    #divison = cv2.divide(im_bw, smooth, scale=100)
-    #ReSize = cv2.resize(divison, (1920, 1080))
-    #cv2.imshow("Image", ReSize)
-    #cv2.waitKey(0)
-    (thresh, im_bw) = cv2.threshold(smooth, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    # perform edge detection, then perform a dilation + erosion to
-    # close gaps in between object edges
-    edged = cv2.Canny(im_bw, 0, 100)
-    edged = cv2.dilate(edged, None, iterations=1)
-    edged = cv2.erode(edged, None, iterations=1)
-    # find contours in the edge map
-    cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    # sort the contours from left-to-right and initialize the
-    # 'pixels per metric' calibration variable
-    (cnts, _) = contours.sort_contours(cnts)
-    pixelsPerMetric = None
+def _compute_stats(df, total_fruit, defect_lower, defect_upper):
+    stats = {}
+    for col, key in [('BruiseNew','BN'),('BruiseOld','BO'),('Sunburn','SB'),
+                     ('Colour','CL'),('Hail','HL'),('Insect','IN'),('MiscDamage','MD')]:
+        try:    pct = df[col].sum() / total_fruit * 100
+        except: pct = 0
+        stats[key] = (pct, _colour_for(pct, defect_lower, defect_upper))
+    return stats
 
-    # loop over the contours individually
-    SizeList = []
-    for c in cnts:
-        # if the contour is not sufficiently large, ignore it
-        if cv2.contourArea(c) < 10000:
-            continue
-        # compute the rotated bounding box of the contour
-        orig = image.copy()
-        box = cv2.minAreaRect(c)
-        box = cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
-        box = np.array(box, dtype="int")
-        # order the points in the contour such that they appear
-        # in top-left, top-right, bottom-right, and bottom-left
-        # order, then draw the outline of the rotated bounding
-        # box
-        box = perspective.order_points(box)
-        cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
-        # loop over the original points and draw them
-        for (x, y) in box:
-            cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
 
-        # unpack the ordered bounding box, then compute the midpoint
-        # between the top-left and top-right coordinates, followed by
-        # the midpoint between bottom-left and bottom-right coordinates
-        (tl, tr, br, bl) = box
-        (tltrX, tltrY) = midpoint(tl, tr)
-        (blbrX, blbrY) = midpoint(bl, br)
-        # compute the midpoint between the top-left and top-right points,
-        # followed by the midpoint between the top-righ and bottom-right
-        (tlblX, tlblY) = midpoint(tl, bl)
-        (trbrX, trbrY) = midpoint(tr, br)
-        # draw the midpoints on the image
-        cv2.circle(orig, (int(tltrX), int(tltrY)), 5, (255, 0, 0), -1)
-        cv2.circle(orig, (int(blbrX), int(blbrY)), 5, (255, 0, 0), -1)
-        cv2.circle(orig, (int(tlblX), int(tlblY)), 5, (255, 0, 0), -1)
-        cv2.circle(orig, (int(trbrX), int(trbrY)), 5, (255, 0, 0), -1)
-        # draw lines between the midpoints
-        cv2.line(orig, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)),
-            (255, 0, 255), 2)
-        cv2.line(orig, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)),
-            (255, 0, 255), 2)
-        # compute the Euclidean distance between the midpoints
-        dA = dist.euclidean((tltrX, tltrY), (blbrX, blbrY))
-        dB = dist.euclidean((tlblX, tlblY), (trbrX, trbrY))
-        # if the pixels per metric has not been initialized, then
-        # compute it as the ratio of pixels to supplied metric
-        # (in this case, inches)
-        if pixelsPerMetric is None:
-            pixelsPerMetric = dB / 63
-            # compute the size of the object
-        dimA = dA / pixelsPerMetric
-        dimB = dB / pixelsPerMetric
-        # draw the object sizes on the image
-        cv2.putText(orig, "{:.1f}in".format(dimA),
-            (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
-            0.65, (255, 255, 255), 2)
-        cv2.putText(orig, "{:.1f}in".format(dimB),
-            (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
-            0.65, (255, 255, 255), 2)
-        dimA = dimA * 1.15
-        dimB = dimB * 1.15
-        if dimA < 25 or dimA > 100:
-            continue
-        if dimB < 25 or dimB > 100:
-            continue
-        if dimA > dimB:
-            SizeList.append(int(dimA))
-        if dimB > dimA:
-            SizeList.append(int(dimB))
-        print(SizeList)
+QA_COLS = [
+    "Super_ID","TimeStamp","CheckID","FruitChecked",
+    "BruiseOld","BruiseNew","Sunburn","Colour","Hail","Insect","MiscDamage",
+    "Variety","Block"
+]
 
-REDate = re.compile(Date + " [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]")
 
-CurrentBinLog = cursor.execute("""SELECT * FROM QA""")
-CurrentBinLogFrame = pd.DataFrame(CurrentBinLog, columns=["Super_ID", "TimeStamp", "CheckID", "FruitChecked", "BruiseOld", "BruiseNew", "Sunburn", "Colour", "Hail", "Insect", "MiscDamage", "Size_1", "Size_2", "Size_3", "Size_4", 
-                                                          "Size_5", "Size_6", "Size_7", "Size_8", "Size_9", "Size_10", "Size_11", "Size_12", "Size_13", "Size_14", "Size_15", "Size_16", "Size_17", "Size_18", "Size_19", "Size_20",
-                                                          "Variety", "Block"])
-CurrentBinLogFrame = CurrentBinLogFrame[CurrentBinLogFrame['TimeStamp'].str.contains(Date)]
+def AppleQAInput():
+    BASE_PATH  = str(Path.home() / 'OneDrive' / '~FARM DATA' / 'Timesheet App') + '/'
+    CompName   = platform.node()
+    Date       = datetime.datetime.today().strftime('%Y-%m-%d')
 
-layoutB = [ [sg.Text('Apple QA', font=("", 45, "bold"))],
-            [sg.Text('Select Field', font=("", 30, "bold"))],
-            [sg.Combo(FieldList, default_value = 'Field', size = 50, key = 'Field', font=("", 30, "bold"))],
-            [sg.Text('Select Variety', font=("", 30, "bold"))],
-            [sg.Combo(VarietyList, default_value = 'Job', size = 50, key = 'Job', font=("", 30, "bold"))],
-            [sg.Button('Next', font=("", 30, "bold"))], [sg.Button('Back', font=("", 30, "bold"))]]
-window = sg.Window('Row Job Manager', layoutB).Finalize()
-window.Maximize()
-event, values = window.read()
-if event == "Back":
-    window.close()
-if event == "Next":
-    window.close()
-    Block = values['Field']
-    Variety = values['Job']
-CrewLoop = 0
-while CrewLoop < 1:
-    CrewButtonList = []
-    for activeCrew in CrewList:
-        CrewButton = sg.pin(sg.Button(activeCrew, font=("", 50, "bold")))
-        CrewButtonList.append(CrewButton)
-    layoutB = [ [sg.Text('SELECT CREW', font=("", 45, "bold"))],
-                CrewButtonList,
-                [sg.Button('Back', font=("", 30, "bold"))]]
-    window = sg.Window('Row Job Manager', layoutB).Finalize()
-    window.Maximize()
-    event, values = window.read()
-    if event == "Back":
-        window.close()
-        layoutB = [ [sg.Text('EXITING FOR END OF DAY?', font=("", 45, "bold"))],
-                    [sg.Button('YES', font=("", 30, "bold"))], [sg.Button('NO', font=("", 30, "bold"))]]
-        window = sg.Window('Row Job Manager', layoutB).Finalize()
-        window.Maximize()
-        event, values = window.read()
-        if event == 'YES':
-            window.close()
-            PhotoDir = CameraURL
-            DirList = os.listdir(PhotoDir)
-            for file in DirList:
-                file_path = os.path.join(PhotoDir, file)
-                print(file_path)
-                os.unlink(file_path)
-            CrewLoop = 1
-        else:
-            window.close()
-            CrewLoop = 1
-    else:
-        window.close()
-        layoutB = [ [sg.Text('TAKE PHOTO NOW AND PRESS OK', font=("", 45, "bold"))],
-                    [sg.Button('OK', font=("", 30, "bold"))]]
-        window = sg.Window('Row Job Manager', layoutB).Finalize()
-        window.Maximize()
-        DummyVar = window.read()
-        window.close()
-        Crew = event
-        DefectComboList = []
-        for Defect in DefectList:
-            DefectCombo = sg.pin(sg.Combo([Defect, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], default_value = Defect, size = 20, key = Defect, font=("", 30, "bold")))
-            DefectComboList.append(DefectCombo)
-        DefectComboList2 = []
-        for Defect in DefectList2:
-            DefectCombo = sg.pin(sg.Combo([Defect, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], default_value = Defect, size = 20, key = Defect, font=("", 30, "bold")))
-            DefectComboList2.append(DefectCombo)
-        QASTATSLOG = cursor.execute("""SELECT * FROM QA""")
-        QASTATSLOGFRAME = pd.DataFrame(QASTATSLOG, columns=["Super_ID", "TimeStamp", "CheckID", "FruitChecked", "BruiseOld", "BruiseNew", "Sunburn", "Colour", "Hail", "Insect", "MiscDamage", "Size_1", "Size_2", "Size_3", "Size_4", 
-                                                                "Size_5", "Size_6", "Size_7", "Size_8", "Size_9", "Size_10", "Size_11", "Size_12", "Size_13", "Size_14", "Size_15", "Size_16", "Size_17", "Size_18", "Size_19", "Size_20",
-                                                                "Variety", "Block"])
-        QASTATSLOGFRAME = QASTATSLOGFRAME[QASTATSLOGFRAME['TimeStamp'].str.contains(Date)]
-        QASTATSLOGFRAME = QASTATSLOGFRAME[QASTATSLOGFRAME['CheckID'].str.contains(Crew)]
-        print(QASTATSLOGFRAME)
-        TotalFruitChecked = QASTATSLOGFRAME['FruitChecked'].sum()
-        if len(QASTATSLOGFRAME) < 1:
-            TotalFruitChecked = 1
+    TITLE_FONT = ("Sans", 20, "bold")
+    BTN_FONT   = ("Sans", 14, "bold")
+    BTN_SIZE   = (22, 2)
+    BTN_PAD    = (8, 5)
+    COMBO_FONT = ("Sans", 14, "bold")
+    STAT_FONT  = ("Sans", 18, "bold")
+    WARN_FONT  = ("Sans", 22, "bold")
+    btn_kwargs  = dict(font=BTN_FONT, size=BTN_SIZE, pad=BTN_PAD, border_width=2)
+    back_kwargs = dict(font=BTN_FONT, size=(12, 1), pad=BTN_PAD,
+                       button_color=('white', 'firebrick3'), border_width=2)
+
+    def _win(inner, title='Apple QA'):
+        layout = [[sg.VPush()],
+                  [sg.Push(), sg.Column(inner, element_justification='c'), sg.Push()],
+                  [sg.VPush()]]
+        w = sg.Window(title, layout, finalize=True, resizable=True)
+        w.Maximize()
+        return w
+
+    # ── Load QA variables ─────────────────────────────────────────────────
+    try:
+        vars_df = pd.read_excel(BASE_PATH + 'WORKER DATA/HarvestQAVariables.xlsx')
+    except Exception as e:
+        sg.popup_error(f'Could not load HarvestQAVariables.xlsx:\n{e}', title='Apple QA Error', font=WARN_FONT)
+        return
+
+    def _var(cls):
+        row = vars_df.loc[vars_df['Class'] == cls]
+        return float(row['Variable'].tolist()[0]) if len(row) else 0.0
+
+    defect_lower = _var('Defect Lower Limit')
+    defect_upper = _var('Defect Upper Limit')
+
+    # ── Load reference data ───────────────────────────────────────────────
+    try:
+        variety_list = pd.read_excel(BASE_PATH + 'BlockData/VARIETY.xlsx')['VARIETY'].tolist()
+        field_list   = ['WISHARTS - PL','WISHARTS - BRAVO','CHERRYS','CHERRY BRAVO',
+                        'S-SHED','STK','P-BELLE','LIR','ROB BRAVO','MODI','DWF','GSPL','TOTAL']
+        crew_list    = ['SR1','SR2','SR3','SR4','SR5','SR6','Mark']
+    except Exception as e:
+        sg.popup_error(f'Could not load reference data:\n{e}', title='Apple QA Error', font=WARN_FONT)
+        return
+
+    # ── Database ──────────────────────────────────────────────────────────
+    db_path = BASE_PATH + f'{CompName} AppleLog.db'
+    try:
+        engine      = create_engine("sqlite:///" + db_path)
+        sql_connect = sqlite3.connect(db_path)
+        cursor      = sql_connect.cursor()
+        cursor.execute(f"CREATE TABLE IF NOT EXISTS QA ({', '.join([c + ' TEXT' for c in QA_COLS])})")
+        sql_connect.commit()
+    except Exception as e:
+        sg.popup_error(f'Could not connect to Apple QA database:\n{e}', title='Apple QA Error', font=WARN_FONT)
+        return
+
+    # ── SCREEN 1: Field + Variety ─────────────────────────────────────────
+    layout = [
+        [sg.Text('Apple QA', font=TITLE_FONT)],
+        [sg.Text('Select Field', font=BTN_FONT)],
+        [sg.Combo(field_list, default_value='Select Field', size=35, key='Field', font=COMBO_FONT)],
+        [sg.Text('Select Variety', font=BTN_FONT)],
+        [sg.Combo(variety_list, default_value='Select Variety', size=35, key='Variety', font=COMBO_FONT)],
+        [sg.Button('NEXT', **btn_kwargs), sg.Button('BACK', **back_kwargs)],
+    ]
+    win = _win(layout)
+    ev, vals = win.read()
+    win.close()
+    if ev in (sg.WIN_CLOSED, 'BACK'):
+        return
+    selected_field   = vals['Field']
+    selected_variety = vals['Variety']
+
+    # ── CREW LOOP ─────────────────────────────────────────────────────────
+    while True:
+        layout = [
+            [sg.Text('SELECT CREW', font=TITLE_FONT)],
+            [sg.Button(c, **btn_kwargs) for c in crew_list],
+            [sg.Button('BACK', **back_kwargs)],
+        ]
+        win = _win(layout)
+        ev, _ = win.read()
+        win.close()
+        if ev in (sg.WIN_CLOSED, 'BACK'):
+            return
+        crew = ev
+
+        # Load today's stats for this crew
         try:
-            BNPCT = QASTATSLOGFRAME['BruiseNew'].sum() / TotalFruitChecked * 100
-            print('BNCT FOUND')
-        except ZeroDivisionError:
-            BNPCT = 0
-        if BNPCT <= DefectLowerLimit:
-            BNPCTCOLOUR = 'lime green'
-        if BNPCT > DefectLowerLimit and BNPCT <= DefectUpperLimit:
-            BNPCTCOLOUR = 'yellow'
-        if BNPCT > DefectUpperLimit:
-            BNPCTCOLOUR = 'tomato2'
-        print(BNPCT)
-        try:
-            BOPCT = QASTATSLOGFRAME['BruiseOld'].sum() / TotalFruitChecked * 100
-        except ZeroDivisionError:
-            BOPCT = 0
-        if BOPCT <= DefectLowerLimit:
-            BOPCTCOLOUR = 'lime green'
-        if BOPCT > DefectLowerLimit and BOPCT <= DefectUpperLimit:
-            BOPCTCOLOUR = 'yellow'
-        if BOPCT > DefectUpperLimit:
-            BOPCTCOLOUR = 'tomato2'
-        try:
-            SBPCT = QASTATSLOGFRAME['Sunburn'].sum() / TotalFruitChecked * 100
-        except ZeroDivisionError:
-            SBPCT = 0
-        if SBPCT <= DefectLowerLimit:
-            SBPCTCOLOUR = 'lime green'
-        if SBPCT > DefectLowerLimit and SBPCT <= DefectUpperLimit:
-            SBPCTCOLOUR = 'yellow'
-        if SBPCT > DefectUpperLimit:
-            SBPCTCOLOUR = 'tomato2'
-        try:
-            CLPCT = QASTATSLOGFRAME['Colour'].sum() / TotalFruitChecked * 100
-        except ZeroDivisionError:
-            CLPCT = 0
-        if CLPCT <= DefectLowerLimit:
-            CLPCTCOLOUR = 'lime green'
-        if CLPCT > DefectLowerLimit and CLPCT <= DefectUpperLimit:
-            CLPCTCOLOUR = 'yellow'
-        if CLPCT > DefectUpperLimit:
-            CLPCTCOLOUR = 'tomato2'
-        try:
-            HLPCT = QASTATSLOGFRAME['Hail'].sum() / TotalFruitChecked * 100
-        except ZeroDivisionError:
-            HLPCT = 0
-        if HLPCT <= DefectLowerLimit:
-            HLPCTCOLOUR = 'lime green'
-        if HLPCT > DefectLowerLimit and HLPCT <= DefectUpperLimit:
-            HLPCTCOLOUR = 'yellow'
-        if HLPCT > DefectUpperLimit:
-            HLPCTCOLOUR = 'tomato2'
-        try:
-            INPCT = QASTATSLOGFRAME['Insect'].sum() / TotalFruitChecked * 100
-        except ZeroDivisionError:
-            INPCT = 0
-        if INPCT <= DefectLowerLimit:
-            INPCTCOLOUR = 'lime green'
-        if INPCT > DefectLowerLimit and INPCT <= DefectUpperLimit:
-            INPCTCOLOUR = 'yellow'
-        if INPCT > DefectUpperLimit:
-            INPCTCOLOUR = 'tomato2'
-        try:
-            MDPCT = QASTATSLOGFRAME['MiscDamage'].sum() / TotalFruitChecked * 100
-        except ZeroDivisionError:
-            MDPCT = 0
-        if MDPCT <= DefectLowerLimit:
-            MDPCTCOLOUR = 'lime green'
-        if MDPCT > DefectLowerLimit and MDPCT <= DefectUpperLimit:
-            MDPCTCOLOUR = 'yellow'
-        if MDPCT > DefectUpperLimit:
-            MDPCTCOLOUR = 'tomato2'
-        SizeListRange = ["Size_1", "Size_2", "Size_3", "Size_4", "Size_5", "Size_6", "Size_7", "Size_8", "Size_9", "Size_10", "Size_11", "Size_12", "Size_13", "Size_14", "Size_15", "Size_16", "Size_17", "Size_18", "Size_19", "Size_20"]
-        AllSizesList = []
-        for column in SizeListRange:
-            print(QASTATSLOGFRAME)
-            columnslist = QASTATSLOGFRAME[column].tolist()
-            for idvsize in columnslist:
-                AllSizesList.append(idvsize)
-        print(AllSizesList)
-        AllSizesList = [x for x in AllSizesList if x is not None]
-        AllSizesList = [x for x in AllSizesList if not np.isnan(x)]
-        print(AllSizesList)
-        try:
-            AVGSZ = sum(AllSizesList) / len(AllSizesList)
-        except ZeroDivisionError:
-            AVGSZ = 0
-        if AVGSZ <= SizeLowerLimit:
-            AVGSZCOLOUR = 'tomato2'
-        if AVGSZ > SizeLowerLimit and AVGSZ <= SizeUpperLimit:
-            AVGSZCOLOUR = 'lime green'
-        if AVGSZ > SizeUpperLimit:
-            AVGSZCOLOUR = 'tomato2'
-        print(QASTATSLOGFRAME)
-        layoutB = [ [sg.Text(Crew + ' Apple QA', font=("", 45, "bold"))],
-                    [sg.Combo(['BinNumber', 1, 2, 3, 4 ,5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25], default_value = 'BinNumber', size = 20, key = 'BinLog', font=("", 30, "bold"))],
-                    [sg.Combo(['Amount of Fruit Checked', 5, 10, 15, 20], default_value = 'Amount of Fruit Checked', size = 20, key = 'AMT', font=("", 30, "bold"))],
-                    DefectComboList,
-                    DefectComboList2,
-                    [sg.Combo(['Insect', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], default_value = 'Insect', size = 15, key = 'Insect', font=("", 20, "bold"))],
-                    [sg.pin(sg.Button('Log', font=("", 20, "bold"))), sg.pin(sg.Button('Back', font=("", 20, "bold")))],
-                    [sg.Text('CREWS CURRENT STATS', font=("", 25, "bold"))],
-                    [sg.pin(sg.Text('Bruise New = ' + str(int(BNPCT)) + '%', font=("", 25, "bold"), text_color=BNPCTCOLOUR)), sg.pin(sg.Text('Bruise Old = ' + str(int(BOPCT)) + '%', font=("", 25, "bold"), text_color=BOPCTCOLOUR))],
-                    [sg.pin(sg.Text('Sunburn = ' + str(int(SBPCT)) + '%', font=("", 25, "bold"), text_color=SBPCTCOLOUR)), sg.pin(sg.Text('Colour = ' + str(int(CLPCT)) + '%', font=("", 25, "bold"), text_color=CLPCTCOLOUR))],
-                    [sg.pin(sg.Text('Misc Damage = ' + str(int(MDPCT)) + '%', font=("", 25, "bold"), text_color=MDPCTCOLOUR)), sg.pin(sg.Text('Hail = ' + str(int(HLPCT)) + '%', font=("", 25, "bold"), text_color=HLPCTCOLOUR))],
-                    [sg.pin(sg.Text('Insect = ' + str(int(INPCT)) + '%', font=("", 25, "bold"), text_color=INPCTCOLOUR)), sg.pin(sg.Text('AVG Size = ' + str(int(AVGSZ)) + 'mm', font=("", 25, "bold"), text_color=AVGSZCOLOUR))],
-                    [sg.Text('GREEN  - ALL GOOD', font=("", 25, "bold"), text_color="lime green")],
-                    [sg.Text('YELLOW - KEEP AN EYE ON IT', font=("", 25, "bold"), text_color="yellow")],
-                    [sg.Text('RED - REPORT TO SUPER', font=("", 25, "bold"), text_color="tomato2")]]
-        window = sg.Window('Row Job Manager', layoutB).Finalize()
-        window.Maximize()
-        event, values = window.read()
-        if event == 'Log':
-            window.close()
-            QADATAFRAME = pd.DataFrame(columns=["Super_ID", "TimeStamp", "CheckID", "FruitChecked", "BruiseOld", "BruiseNew", "Sunburn", "Colour", "Hail", "Insect", "MiscDamage", "Size_1", "Size_2", "Size_3", "Size_4", 
-                                                            "Size_5", "Size_6", "Size_7", "Size_8", "Size_9", "Size_10", "Size_11", "Size_12", "Size_13", "Size_14", "Size_15", "Size_16", "Size_17", "Size_18", "Size_19", "Size_20",
-                                                            "Variety", "Block"])
-            BinID = values['BinLog']
-            DateCode = Date.replace('-', '')
-            print(DateCode)
-            BinCode = str(Crew) + str(DateCode) + str(BinID)
-            AMT = values['AMT']
+            raw   = cursor.execute("SELECT * FROM QA")
+            qa_df = pd.DataFrame(raw, columns=QA_COLS)
+            qa_df = qa_df[qa_df['TimeStamp'].str.contains(Date, na=False)]
+            qa_df = qa_df[qa_df['CheckID'].str.contains(crew, na=False)]
+            for col in QA_COLS[3:]:
+                qa_df[col] = pd.to_numeric(qa_df[col], errors='coerce')
+            total_fruit = qa_df['FruitChecked'].sum() or 1
+        except Exception:
+            qa_df = pd.DataFrame(columns=QA_COLS)
+            total_fruit = 1
+
+        stats = _compute_stats(qa_df, total_fruit, defect_lower, defect_upper)
+
+        defects1 = ['Bruise-Old', 'Bruise-New', 'Sunburn']
+        defects2 = ['Colour', 'Misc Damage', 'Hail']
+        row1 = [sg.Combo([d]+list(range(1,11)), default_value=d, size=18, key=d, font=COMBO_FONT) for d in defects1]
+        row2 = [sg.Combo([d]+list(range(1,11)), default_value=d, size=18, key=d, font=COMBO_FONT) for d in defects2]
+
+        BN, BN_C = stats['BN'];   BO, BO_C = stats['BO'];   SB, SB_C = stats['SB']
+        CL, CL_C = stats['CL'];   HL, HL_C = stats['HL'];   IN_, IN_C = stats['IN']
+        MD, MD_C = stats['MD']
+
+        layout = [
+            [sg.Text(f'{crew}  —  Apple QA', font=TITLE_FONT)],
+            [sg.Combo(['Bin #']+list(range(1,26)), default_value='Bin #', size=15, key='BinLog', font=COMBO_FONT),
+             sg.Combo(['Fruit Checked',5,10,15,20], default_value='Fruit Checked', size=22, key='AMT', font=COMBO_FONT)],
+            row1, row2,
+            [sg.Combo(['Insect']+list(range(1,11)), default_value='Insect', size=15, key='Insect', font=COMBO_FONT)],
+            [sg.Button('LOG', **btn_kwargs), sg.Button('BACK', **back_kwargs)],
+            [sg.HorizontalSeparator()],
+            [sg.Text("TODAY'S CREW STATS", font=BTN_FONT)],
+            [sg.Text(f'Bruise New={int(BN)}%', font=STAT_FONT, text_color=BN_C),
+             sg.Text(f'Bruise Old={int(BO)}%', font=STAT_FONT, text_color=BO_C)],
+            [sg.Text(f'Sunburn={int(SB)}%',    font=STAT_FONT, text_color=SB_C),
+             sg.Text(f'Colour={int(CL)}%',     font=STAT_FONT, text_color=CL_C)],
+            [sg.Text(f'Misc Damage={int(MD)}%',font=STAT_FONT, text_color=MD_C),
+             sg.Text(f'Hail={int(HL)}%',       font=STAT_FONT, text_color=HL_C)],
+            [sg.Text(f'Insect={int(IN_)}%',    font=STAT_FONT, text_color=IN_C)],
+            [sg.Text('● GREEN=Good  ● YELLOW=Watch  ● RED=Report to Super', font=("Sans",11,"bold"))],
+        ]
+        win = _win(layout)
+        ev, vals = win.read()
+        win.close()
+
+        if ev in (sg.WIN_CLOSED, 'BACK'):
+            continue  # back to crew selection
+
+        if ev == 'LOG':
+            def _iv(k):
+                try:    return int(vals[k])
+                except: return 0
+
+            bin_code = f"{crew}{Date.replace('-','')}{vals['BinLog']}"
+            amt      = _iv('AMT') or 10
+            bo, bn, sb = _iv('Bruise-Old'), _iv('Bruise-New'), _iv('Sunburn')
+            cl, md, hl = _iv('Colour'), _iv('Misc Damage'), _iv('Hail')
+            ic         = _iv('Insect')
+
+            data_row = [CompName, datetime.datetime.now(), bin_code, amt,
+                        bo, bn, sb, cl, hl, ic, md, selected_variety, selected_field]
+            new_df = pd.DataFrame([data_row], columns=QA_COLS)
             try:
-                BO = int(values['Bruise-Old'])
-            except ValueError:
-                BO = 0
-            try:
-                BN = int(values['Bruise-New'])
-            except ValueError:
-                BN = 0 
-            try:
-                SB = int(values['Sunburn'])
-            except ValueError:
-                SB = 0
-            try:
-                CL = int(values['Colour'])
-            except ValueError:
-                CL = 0
-            try:
-                MD = int(values['Misc Damage'])
-            except ValueError:
-                MD = 0
-            try:
-                HL = int(values['Hail'])
-            except ValueError:
-                HL = 0
-            try:
-                IC = int(values['Insect'])
-            except ValueError:
-                IC = 0
-            try:
-                AMT = int(AMT)
-            except ValueError:
-                AMT = 10
-            SizeList = []
-            AppleSize()
-            if SizeList == []:
-                SizeList = [None, None]
-            SizeList.pop(0)
-            print(SizeList)
-            TimeStamp = datetime.datetime.now()
-            DataList = [CompName, TimeStamp, BinCode, AMT, BO, BN, SB, CL, HL, IC, MD]
-            for i in SizeList:
-                DataList.append(i)
-            ReaminingNoneAdder = 32 - len(DataList)
-            RangeList = list(range(1, ReaminingNoneAdder))
-            for i in RangeList:
-                DataList.append(None)
-            DataList.append(Variety)
-            DataList.append(Block)
-            print(DataList)
-            QADATAFRAME.loc[len(QADATAFRAME)]=DataList
-            QADATAFRAME.to_sql('QA', con=engine, if_exists='append', index=False)
-            TotalFruitChecked = QADATAFRAME['FruitChecked'].sum()
-            BNPCT = QADATAFRAME['BruiseNew'].sum() / TotalFruitChecked * 100
-            if BNPCT <= DefectLowerLimit:
-                BNPCTCOLOUR = 'lime green'
-            if BNPCT > DefectLowerLimit and BNPCT <= DefectUpperLimit:
-                BNPCTCOLOUR = 'yellow'
-            if BNPCT > DefectUpperLimit:
-                BNPCTCOLOUR = 'tomato2'
-            BOPCT = QADATAFRAME['BruiseOld'].sum() / TotalFruitChecked * 100
-            if BOPCT <= DefectLowerLimit:
-                BOPCTCOLOUR = 'lime green'
-            if BOPCT > DefectLowerLimit and BOPCT <= DefectUpperLimit:
-                BOPCTCOLOUR = 'yellow'
-            if BOPCT > DefectUpperLimit:
-                BOPCTCOLOUR = 'tomato2'
-            SBPCT = QADATAFRAME['Sunburn'].sum() / TotalFruitChecked * 100
-            if SBPCT <= DefectLowerLimit:
-                SBPCTCOLOUR = 'lime green'
-            if SBPCT > DefectLowerLimit and SBPCT <= DefectUpperLimit:
-                SBPCTCOLOUR = 'yellow'
-            if SBPCT > DefectUpperLimit:
-                SBPCTCOLOUR = 'tomato2'
-            CLPCT = QADATAFRAME['Colour'].sum() / TotalFruitChecked * 100
-            if CLPCT <= DefectLowerLimit:
-                CLPCTCOLOUR = 'lime green'
-            if CLPCT > DefectLowerLimit and CLPCT <= DefectUpperLimit:
-                CLPCTCOLOUR = 'yellow'
-            if CLPCT > DefectUpperLimit:
-                CLPCTCOLOUR = 'tomato2'
-            HLPCT = QADATAFRAME['Hail'].sum() / TotalFruitChecked * 100
-            if HLPCT <= DefectLowerLimit:
-                HLPCTCOLOUR = 'lime green'
-            if HLPCT > DefectLowerLimit and HLPCT <= DefectUpperLimit:
-                HLPCTCOLOUR = 'yellow'
-            if HLPCT > DefectUpperLimit:
-                HLPCTCOLOUR = 'tomato2'
-            INPCT = QADATAFRAME['Insect'].sum() / TotalFruitChecked * 100
-            if INPCT <= DefectLowerLimit:
-                INPCTCOLOUR = 'lime green'
-            if INPCT > DefectLowerLimit and INPCT <= DefectUpperLimit:
-                INPCTCOLOUR = 'yellow'
-            if INPCT > DefectUpperLimit:
-                INPCTCOLOUR = 'tomato2'
-            MDPCT = QADATAFRAME['MiscDamage'].sum() / TotalFruitChecked * 100
-            if MDPCT <= DefectLowerLimit:
-                MDPCTCOLOUR = 'lime green'
-            if MDPCT > DefectLowerLimit and MDPCT <= DefectUpperLimit:
-                MDPCTCOLOUR = 'yellow'
-            if MDPCT > DefectUpperLimit:
-                MDPCTCOLOUR = 'tomato2'
-            SizeListRange = ["Size_1", "Size_2", "Size_3", "Size_4", "Size_5", "Size_6", "Size_7", "Size_8", "Size_9", "Size_10", "Size_11", "Size_12", "Size_13", "Size_14", "Size_15", "Size_16", "Size_17", "Size_18", "Size_19", "Size_20"]
-            AllSizesList = []
-            for column in SizeListRange:
-                columnslist = QADATAFRAME[column].tolist()
-                for idvsize in columnslist:
-                    AllSizesList.append(idvsize)
-            AllSizesList = [x for x in AllSizesList if x is not None]
-            try:
-                AVGSZ = sum(AllSizesList) / len(AllSizesList)
-            except ZeroDivisionError:
-                AVGSZ = 0
-            if AVGSZ <= SizeLowerLimit:
-                AVGSZCOLOUR = 'tomato2'
-            if AVGSZ > SizeLowerLimit and AVGSZ <= SizeUpperLimit:
-                AVGSZCOLOUR = 'lime green'
-            if AVGSZ > SizeUpperLimit:
-                AVGSZCOLOUR = 'tomato2'
-            layoutB = [ [sg.Text('CHECK STATS', font=("", 25, "bold"))],
-                        [sg.Text('Bruise New = ' + str(int(BNPCT)) + '%', font=("", 35, "bold"), text_color=BNPCTCOLOUR)],
-                        [sg.Text('Bruise Old = ' + str(int(BOPCT)) + '%', font=("", 35, "bold"), text_color=BOPCTCOLOUR)],
-                        [sg.Text('Sunburn = ' + str(int(SBPCT)) + '%', font=("", 35, "bold"), text_color=SBPCTCOLOUR)],
-                        [sg.Text('Colour = ' + str(int(CLPCT)) + '%', font=("", 35, "bold"), text_color=CLPCTCOLOUR)],
-                        [sg.Text('Misc Damage = ' + str(int(MDPCT)) + '%', font=("", 35, "bold"), text_color=MDPCTCOLOUR)],
-                        [sg.Text('Hail = ' + str(int(HLPCT)) + '%', font=("", 35, "bold"), text_color=HLPCTCOLOUR)],
-                        [sg.Text('Insect = ' + str(int(INPCT)) + '%', font=("", 35, "bold"), text_color=INPCTCOLOUR)],
-                        [sg.Text('AVG Size = ' + str(int(AVGSZ)) + 'mm', font=("", 35, "bold"), text_color=AVGSZCOLOUR)],
-                        [sg.Button('Done', font=("", 30, "bold"))], [sg.Button('Back', font=("", 30, "bold"))]]
-            window = sg.Window('Row Job Manager', layoutB).Finalize()
-            window.Maximize()
-            event, values = window.read()
-            if event == 'Done':
-                window.close()
-            else:
-                window.close()
-        else:
-            window.close()
+                new_df.to_sql('QA', con=engine, if_exists='append', index=False)
+            except Exception as e:
+                sg.popup_error(f'Failed to save QA record:\n{e}', title='Apple QA Error', font=WARN_FONT)
+                continue
+
+            # Post-log summary for this single check
+            for col in QA_COLS[3:]:
+                new_df[col] = pd.to_numeric(new_df[col], errors='coerce')
+            s = _compute_stats(new_df, amt, defect_lower, defect_upper)
+            layout = [
+                [sg.Text('THIS CHECK — STATS', font=TITLE_FONT)],
+                [sg.Text(f'Bruise New={int(s["BN"][0])}%',    font=STAT_FONT, text_color=s['BN'][1])],
+                [sg.Text(f'Bruise Old={int(s["BO"][0])}%',    font=STAT_FONT, text_color=s['BO'][1])],
+                [sg.Text(f'Sunburn={int(s["SB"][0])}%',       font=STAT_FONT, text_color=s['SB'][1])],
+                [sg.Text(f'Colour={int(s["CL"][0])}%',        font=STAT_FONT, text_color=s['CL'][1])],
+                [sg.Text(f'Misc Damage={int(s["MD"][0])}%',   font=STAT_FONT, text_color=s['MD'][1])],
+                [sg.Text(f'Hail={int(s["HL"][0])}%',          font=STAT_FONT, text_color=s['HL'][1])],
+                [sg.Text(f'Insect={int(s["IN"][0])}%',        font=STAT_FONT, text_color=s['IN'][1])],
+                [sg.Button('DONE', **btn_kwargs)],
+            ]
+            win = _win(layout)
+            win.read()
+            win.close()
+            # Loop back to crew selection for next check
+
