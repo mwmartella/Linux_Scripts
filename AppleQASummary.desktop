@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Apple QA Summary
+Comment=MWSS Apple QA Daily Summary - SantaRita Orchards
+Exec=sh -c '$HOME/Documents/Linux_Scripts/run_qa_summary.sh >> "$HOME/Documents/Linux_Scripts/qa_summary.log" 2>&1'
+Path=$HOME/Documents/Linux_Scripts
+Terminal=false
+Icon=utilities-terminal
+Categories=Office;
