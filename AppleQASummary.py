@@ -7,6 +7,7 @@ for a selected Block (Field) and date.
 import platform
 import datetime
 import sqlite3
+import re
 
 import pandas as pd
 import FreeSimpleGUI as sg
@@ -154,6 +155,10 @@ def AppleQASummary():
         conn.close()
         return
 
+    # CheckID is stored as "{WorkerName}{YYYYMMDD}{BinNumber}" — strip the date+bin suffix
+    # so we can group by actual worker name.
+    qa_df['Worker'] = qa_df['CheckID'].str.replace(r'\d{8,}.*$', '', regex=True).str.strip()
+
     # ── BLOCK SELECTION SCREEN ─────────────────────────────────────────────
     while True:
         blocks = sorted(qa_df['Block'].dropna().unique().tolist())
@@ -196,15 +201,15 @@ def AppleQASummary():
     for col in DEFECT_COLS:
         overall[col] = _pct(block_df[col].sum(), total_fruit)
 
-    # Per-worker breakdown — full day totals (all blocks)
-    workers = sorted(qa_df['CheckID'].dropna().unique().tolist())
+    # Per-worker breakdown — full day totals (all blocks), one row per worker
+    workers = sorted(qa_df['Worker'].dropna().unique().tolist())
 
     # Table: columns = Worker | Checks | Fruit | BruiseOld% | BruiseNew% | Sunburn% | Colour% | Hail% | Insect% | MiscDmg%
     headings = ['Worker', 'Checks', 'Fruit'] + [DEFECT_LABELS[c] for c in DEFECT_COLS]
 
     table_rows = []
     for worker in workers:
-        w_df    = qa_df[qa_df['CheckID'] == worker]   # full day, all blocks
+        w_df    = qa_df[qa_df['Worker'] == worker]   # all bins for this worker, full day
         w_fruit = w_df['FruitChecked'].sum()
         w_chks  = len(w_df)
         row = [worker, w_chks, int(w_fruit)]
