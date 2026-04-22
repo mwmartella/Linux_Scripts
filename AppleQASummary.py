@@ -196,15 +196,15 @@ def AppleQASummary():
     for col in DEFECT_COLS:
         overall[col] = _pct(block_df[col].sum(), total_fruit)
 
-    # Per-worker breakdown
-    workers = sorted(block_df['CheckID'].dropna().unique().tolist())
+    # Per-worker breakdown — full day totals (all blocks)
+    workers = sorted(qa_df['CheckID'].dropna().unique().tolist())
 
     # Table: columns = Worker | Checks | Fruit | BruiseOld% | BruiseNew% | Sunburn% | Colour% | Hail% | Insect% | MiscDmg%
     headings = ['Worker', 'Checks', 'Fruit'] + [DEFECT_LABELS[c] for c in DEFECT_COLS]
 
     table_rows = []
     for worker in workers:
-        w_df    = block_df[block_df['CheckID'] == worker]
+        w_df    = qa_df[qa_df['CheckID'] == worker]   # full day, all blocks
         w_fruit = w_df['FruitChecked'].sum()
         w_chks  = len(w_df)
         row = [worker, w_chks, int(w_fruit)]
@@ -212,10 +212,12 @@ def AppleQASummary():
             row.append(f"{_pct(w_df[col].sum(), w_fruit)}%")
         table_rows.append(row)
 
-    # Overall summary row (bold-ish via text)
-    overall_row = ['— TOTAL —', total_checks, int(total_fruit)]
+    # Overall total row for the full day
+    day_fruit  = qa_df['FruitChecked'].sum()
+    day_checks = len(qa_df)
+    overall_row = ['— DAY TOTAL —', day_checks, int(day_fruit)]
     for col in DEFECT_COLS:
-        overall_row.append(f"{overall[col]}%")
+        overall_row.append(f"{_pct(qa_df[col].sum(), day_fruit)}%")
     table_rows.append(overall_row)
 
     # Colour-coded overall bar
@@ -242,7 +244,7 @@ def AppleQASummary():
         *stat_layout,
         [sg.Text('● GREEN ≤ lower limit   ● YELLOW = watch   ● RED = report', font=("Sans", 11, "bold"))],
         [sg.HorizontalSeparator()],
-        [sg.Text('PER-WORKER BREAKDOWN', font=BTN_FONT)],
+        [sg.Text('PER-WORKER BREAKDOWN (full day – all blocks)', font=BTN_FONT)],
         [sg.Table(
             values=table_rows,
             headings=headings,
