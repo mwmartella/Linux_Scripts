@@ -105,192 +105,180 @@ def AppleQASummary():
         sg.popup_error(f'Could not open QA database:\n{e}', title='QA Summary Error', font=WARN_FONT)
         return
 
-    # ── DATE PICKER SCREEN ─────────────────────────────────────────────────
     today_str = datetime.datetime.today().strftime('%Y-%m-%d')
 
-    # Pull available dates from DB
-    try:
-        raw_dates = cursor.execute(
-            "SELECT DISTINCT substr(TimeStamp, 1, 10) FROM QA ORDER BY TimeStamp DESC"
-        ).fetchall()
-        date_list = [r[0] for r in raw_dates if r[0]]
-    except Exception:
-        date_list = []
-
-    if not date_list:
-        date_list = [today_str]
-
-    layout = [
-        [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
-        [sg.Text('Select Date', font=HEADER_FONT)],
-        [sg.Listbox(values=date_list, default_values=[date_list[0]],
-                    size=(20, min(len(date_list), 10)),
-                    font=TABLE_FONT, key='-DATE-', select_mode=sg.LISTBOX_SELECT_MODE_SINGLE)],
-        [sg.Button('NEXT', **btn_kwargs), sg.Button('QUIT', **back_kwargs)],
-    ]
-    win = _centred_window(layout)
-    ev, vals = win.read()
-    win.close()
-    if ev in (sg.WIN_CLOSED, 'QUIT'):
-        conn.close()
-        return
-
-    selected_dates = vals.get('-DATE-', [])
-    selected_date  = selected_dates[0] if selected_dates else today_str
-
-    # ── Load all QA rows for the selected date ─────────────────────────────
-    try:
-        raw = cursor.execute("SELECT * FROM QA").fetchall()
-        qa_df = pd.DataFrame(raw, columns=QA_COLS)
-        qa_df = qa_df[qa_df['TimeStamp'].str.contains(selected_date, na=False)]
-        for col in ['FruitChecked'] + DEFECT_COLS:
-            qa_df[col] = pd.to_numeric(qa_df[col], errors='coerce').fillna(0)
-    except Exception as e:
-        sg.popup_error(f'Failed to load QA data:\n{e}', title='QA Summary Error', font=WARN_FONT)
-        conn.close()
-        return
-
-    if qa_df.empty:
-        sg.popup(f'No QA records found for {selected_date}.', title='QA Summary', font=WARN_FONT)
-        conn.close()
-        return
-
-    # CheckID is stored as "{WorkerName}{YYYYMMDD}{BinNumber}" — strip the date+bin suffix
-    # so we can group by actual worker name.
-    qa_df['Worker'] = qa_df['CheckID'].str.replace(r'\d{8,}.*$', '', regex=True).str.strip()
-
-    # ── BLOCK SELECTION SCREEN ─────────────────────────────────────────────
-    while True:
-        blocks = sorted(qa_df['Block'].dropna().unique().tolist())
-        if not blocks:
-            sg.popup('No blocks found in QA data.', title='QA Summary', font=WARN_FONT)
-            conn.close()
-            return
-
-        layout = [
-            [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
-            [sg.Text(f'Date: {selected_date}', font=HEADER_FONT)],
-            [sg.Text('Select Block / Field', font=HEADER_FONT)],
-            [sg.Listbox(values=blocks, size=(30, min(len(blocks), 10)),
-                        font=TABLE_FONT, key='-BLOCK-',
-                        select_mode=sg.LISTBOX_SELECT_MODE_SINGLE)],
-            [sg.Button('VIEW SUMMARY', **btn_kwargs), sg.Button('BACK', **back_kwargs)],
-        ]
-        win = _centred_window(layout)
-        ev, vals = win.read()
-        win.close()
-        if ev in (sg.WIN_CLOSED, 'BACK'):
-            conn.close()
-            return
-
-        selected_blocks = vals.get('-BLOCK-', [])
-        if not selected_blocks:
-            sg.popup('Please select a block.', title='QA Summary', font=BTN_FONT)
-            continue
-        selected_block = selected_blocks[0]
-        break
-
-    # ── Filter to selected block ───────────────────────────────────────────
-    block_df = qa_df[qa_df['Block'] == selected_block].copy()
-
-    # ── BUILD SUMMARY SCREEN ───────────────────────────────────────────────
-    # Overall totals row
-    total_fruit = block_df['FruitChecked'].sum()
-    total_checks = len(block_df)
-    overall = {}
-    for col in DEFECT_COLS:
-        overall[col] = _pct(block_df[col].sum(), total_fruit)
-
-    # Per-worker breakdown — full day totals (all blocks), one row per worker
-    workers = sorted(qa_df['Worker'].dropna().unique().tolist())
-
-    # Table: columns = Worker | Checks | Fruit | BruiseOld% | BruiseNew% | Sunburn% | Colour% | Hail% | Insect% | MiscDmg%
-    headings = ['Worker', 'Checks', 'Fruit'] + [DEFECT_LABELS[c] for c in DEFECT_COLS]
-
-    table_rows = []
-    for worker in workers:
-        w_df    = qa_df[qa_df['Worker'] == worker]   # all bins for this worker, full day
-        w_fruit = w_df['FruitChecked'].sum()
-        w_chks  = len(w_df)
-        row = [worker, w_chks, int(w_fruit)]
-        for col in DEFECT_COLS:
-            row.append(f"{_pct(w_df[col].sum(), w_fruit)}%")
-        table_rows.append(row)
-
-    # Overall total row for the full day
-    day_fruit  = qa_df['FruitChecked'].sum()
-    day_checks = len(qa_df)
-    overall_row = ['— DAY TOTAL —', day_checks, int(day_fruit)]
-    for col in DEFECT_COLS:
-        overall_row.append(f"{_pct(qa_df[col].sum(), day_fruit)}%")
-    table_rows.append(overall_row)
-
-    # Colour-coded overall bar
-    stat_rows = []
-    for col in DEFECT_COLS:
-        pct   = overall[col]
-        colour = _colour_for(pct, defect_lower, defect_upper)
-        stat_rows.append(
-            sg.Text(f'{DEFECT_LABELS[col]}: {pct}%', font=STAT_FONT, text_color=colour, pad=(12, 3))
-        )
-
-    # Split stat_rows into pairs for a two-column display
-    stat_layout = []
-    for i in range(0, len(stat_rows), 2):
-        pair = stat_rows[i:i+2]
-        stat_layout.append(pair)
-
-    # ── Detail rows for the "View Checks" screen ──────────────────────────
-    detail_headings = ['Timestamp', 'Worker', 'Check ID', 'Fruit'] + [DEFECT_LABELS[c] for c in DEFECT_COLS]
-    detail_rows = []
-    for _, r in block_df.sort_values('TimeStamp').iterrows():
-        row = [r['TimeStamp'], r['Worker'], r['CheckID'], int(r['FruitChecked'])]
-        for col in DEFECT_COLS:
-            row.append(int(r[col]))
-        detail_rows.append(row)
+    # State: 'date' → 'block' → 'summary' → loop
+    state = 'date'
+    selected_date  = today_str
+    selected_block = None
+    qa_df          = None
 
     while True:
-        layout = [
-            [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
-            [sg.Text(f'Block: {selected_block}   |   Date: {selected_date}', font=HEADER_FONT)],
-            [sg.Text(f'Total Checks: {total_checks}   |   Total Fruit Inspected: {int(total_fruit)}', font=BTN_FONT)],
-            [sg.HorizontalSeparator()],
-            [sg.Text('OVERALL DEFECT RATES (colour-coded)', font=BTN_FONT)],
-            *stat_layout,
-            [sg.Text('● GREEN ≤ lower limit   ● YELLOW = watch   ● RED = report', font=("Sans", 11, "bold"))],
-            [sg.HorizontalSeparator()],
-            [sg.Text('PER-WORKER BREAKDOWN (full day – all blocks)', font=BTN_FONT)],
-            [sg.Table(
-                values=table_rows,
-                headings=headings,
-                font=TABLE_FONT,
-                auto_size_columns=True,
-                num_rows=min(len(table_rows) + 1, 15),
-                justification='center',
-                key='-WORKER_TABLE-',
-                row_colors=[(len(table_rows) - 1, 'darkslategray', 'white')],
-            )],
-            [sg.Button('VIEW CHECKS DETAIL', **btn_kwargs),
-             sg.Button('BACK TO BLOCKS',     **btn_kwargs),
-             sg.Button('CHANGE DATE',        **btn_kwargs),
-             sg.Button('QUIT',               **back_kwargs)],
-        ]
-        win = _centred_window(layout, title=f'QA Summary – {selected_block} – {selected_date}')
-        ev, _ = win.read()
-        win.close()
 
-        if ev == 'VIEW CHECKS DETAIL':
-            _show_checks_detail(detail_rows, detail_headings, selected_block, selected_date)
-        elif ev == 'BACK TO BLOCKS':
-            conn.close()
-            AppleQASummary()
-            return
-        elif ev == 'CHANGE DATE':
-            conn.close()
-            AppleQASummary()
-            return
-        else:
-            break
+        # ── DATE PICKER ────────────────────────────────────────────────────
+        if state == 'date':
+            try:
+                raw_dates = cursor.execute(
+                    "SELECT DISTINCT substr(TimeStamp, 1, 10) FROM QA ORDER BY TimeStamp DESC"
+                ).fetchall()
+                date_list = [r[0] for r in raw_dates if r[0]]
+            except Exception:
+                date_list = []
+            if not date_list:
+                date_list = [today_str]
+
+            layout = [
+                [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
+                [sg.Text('Select Date', font=HEADER_FONT)],
+                [sg.Listbox(values=date_list, default_values=[date_list[0]],
+                            size=(20, min(len(date_list), 10)),
+                            font=TABLE_FONT, key='-DATE-',
+                            select_mode=sg.LISTBOX_SELECT_MODE_SINGLE)],
+                [sg.Button('NEXT', **btn_kwargs), sg.Button('QUIT', **back_kwargs)],
+            ]
+            win = _centred_window(layout)
+            ev, vals = win.read()
+            win.close()
+
+            if ev in (sg.WIN_CLOSED, 'QUIT'):
+                break
+            sel = vals.get('-DATE-', [])
+            selected_date = sel[0] if sel else today_str
+
+            # Load QA data for this date
+            try:
+                raw = cursor.execute("SELECT * FROM QA").fetchall()
+                qa_df = pd.DataFrame(raw, columns=QA_COLS)
+                qa_df = qa_df[qa_df['TimeStamp'].str.contains(selected_date, na=False)]
+                for col in ['FruitChecked'] + DEFECT_COLS:
+                    qa_df[col] = pd.to_numeric(qa_df[col], errors='coerce').fillna(0)
+            except Exception as e:
+                sg.popup_error(f'Failed to load QA data:\n{e}', title='QA Summary Error', font=WARN_FONT)
+                break
+
+            if qa_df.empty:
+                sg.popup(f'No QA records found for {selected_date}.', title='QA Summary', font=WARN_FONT)
+                continue  # go back to date picker
+
+            qa_df['Worker'] = qa_df['CheckID'].str.replace(r'\d{8,}.*$', '', regex=True).str.strip()
+            state = 'block'
+
+        # ── BLOCK SELECTION ────────────────────────────────────────────────
+        elif state == 'block':
+            blocks = sorted(qa_df['Block'].dropna().unique().tolist())
+            if not blocks:
+                sg.popup('No blocks found in QA data.', title='QA Summary', font=WARN_FONT)
+                state = 'date'
+                continue
+
+            layout = [
+                [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
+                [sg.Text(f'Date: {selected_date}', font=HEADER_FONT)],
+                [sg.Text('Select Block / Field', font=HEADER_FONT)],
+                [sg.Listbox(values=blocks, size=(30, min(len(blocks), 10)),
+                            font=TABLE_FONT, key='-BLOCK-',
+                            select_mode=sg.LISTBOX_SELECT_MODE_SINGLE)],
+                [sg.Button('VIEW SUMMARY', **btn_kwargs), sg.Button('BACK', **back_kwargs)],
+            ]
+            win = _centred_window(layout)
+            ev, vals = win.read()
+            win.close()
+
+            if ev in (sg.WIN_CLOSED, 'BACK'):
+                state = 'date'
+                continue
+            sel = vals.get('-BLOCK-', [])
+            if not sel:
+                sg.popup('Please select a block.', title='QA Summary', font=BTN_FONT)
+                continue
+            selected_block = sel[0]
+            state = 'summary'
+
+        # ── SUMMARY ────────────────────────────────────────────────────────
+        elif state == 'summary':
+            block_df = qa_df[qa_df['Block'] == selected_block].copy()
+
+            total_fruit  = block_df['FruitChecked'].sum()
+            total_checks = len(block_df)
+            overall = {col: _pct(block_df[col].sum(), total_fruit) for col in DEFECT_COLS}
+
+            workers = sorted(qa_df['Worker'].dropna().unique().tolist())
+            headings = ['Worker', 'Checks', 'Fruit'] + [DEFECT_LABELS[c] for c in DEFECT_COLS]
+
+            table_rows = []
+            for worker in workers:
+                w_df    = qa_df[qa_df['Worker'] == worker]
+                w_fruit = w_df['FruitChecked'].sum()
+                row = [worker, len(w_df), int(w_fruit)]
+                for col in DEFECT_COLS:
+                    row.append(f"{_pct(w_df[col].sum(), w_fruit)}%")
+                table_rows.append(row)
+
+            day_fruit  = qa_df['FruitChecked'].sum()
+            day_checks = len(qa_df)
+            overall_row = ['— DAY TOTAL —', day_checks, int(day_fruit)]
+            for col in DEFECT_COLS:
+                overall_row.append(f"{_pct(qa_df[col].sum(), day_fruit)}%")
+            table_rows.append(overall_row)
+
+            stat_rows = []
+            for col in DEFECT_COLS:
+                pct    = overall[col]
+                colour = _colour_for(pct, defect_lower, defect_upper)
+                stat_rows.append(
+                    sg.Text(f'{DEFECT_LABELS[col]}: {pct}%', font=STAT_FONT, text_color=colour, pad=(12, 3))
+                )
+            stat_layout = []
+            for i in range(0, len(stat_rows), 2):
+                stat_layout.append(stat_rows[i:i+2])
+
+            # Detail rows
+            detail_headings = ['Timestamp', 'Worker', 'Check ID', 'Fruit'] + [DEFECT_LABELS[c] for c in DEFECT_COLS]
+            detail_rows = []
+            for _, r in block_df.sort_values('TimeStamp').iterrows():
+                row = [r['TimeStamp'], r['Worker'], r['CheckID'], int(r['FruitChecked'])]
+                for col in DEFECT_COLS:
+                    row.append(int(r[col]))
+                detail_rows.append(row)
+
+            layout = [
+                [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
+                [sg.Text(f'Block: {selected_block}   |   Date: {selected_date}', font=HEADER_FONT)],
+                [sg.Text(f'Total Checks: {total_checks}   |   Total Fruit Inspected: {int(total_fruit)}', font=BTN_FONT)],
+                [sg.HorizontalSeparator()],
+                [sg.Text('OVERALL DEFECT RATES (colour-coded)', font=BTN_FONT)],
+                *stat_layout,
+                [sg.Text('● GREEN ≤ lower limit   ● YELLOW = watch   ● RED = report', font=("Sans", 11, "bold"))],
+                [sg.HorizontalSeparator()],
+                [sg.Text('PER-WORKER BREAKDOWN (full day – all blocks)', font=BTN_FONT)],
+                [sg.Table(
+                    values=table_rows,
+                    headings=headings,
+                    font=TABLE_FONT,
+                    auto_size_columns=True,
+                    num_rows=min(len(table_rows) + 1, 15),
+                    justification='center',
+                    key='-WORKER_TABLE-',
+                    row_colors=[(len(table_rows) - 1, 'darkslategray', 'white')],
+                )],
+                [sg.Button('VIEW CHECKS DETAIL', **btn_kwargs),
+                 sg.Button('BACK TO BLOCKS',     **btn_kwargs),
+                 sg.Button('CHANGE DATE',        **btn_kwargs),
+                 sg.Button('QUIT',               **back_kwargs)],
+            ]
+            win = _centred_window(layout, title=f'QA Summary – {selected_block} – {selected_date}')
+            ev, _ = win.read()
+            win.close()
+
+            if ev == 'VIEW CHECKS DETAIL':
+                _show_checks_detail(detail_rows, detail_headings, selected_block, selected_date)
+                # stay on summary — loop back
+            elif ev == 'BACK TO BLOCKS':
+                state = 'block'
+            elif ev == 'CHANGE DATE':
+                state = 'date'
+            else:
+                break  # QUIT or window closed
 
     conn.close()
 
