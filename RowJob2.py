@@ -210,7 +210,10 @@ def RowJob():
                                          pad=BTN_PAD, border_width=2)),
                         sg.pin(sg.Button('Back',            **back_kwargs)),
                         sg.pin(sg.Button('QA LOG',          font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE,
-                                         pad=BTN_PAD, border_width=2))]]
+                                         pad=BTN_PAD, border_width=2)),
+                        sg.pin(sg.Button('QA SUMMARY',      font=SMALL_BTN_FONT, size=SMALL_BTN_SIZE,
+                                         pad=BTN_PAD, border_width=2,
+                                         button_color=('white', 'DarkSlateBlue')))]]
 
             window = _make_window(layoutB)
             event, values = window.read()
@@ -321,6 +324,16 @@ def RowJob():
                     AppleQAInput()
                 except Exception as e:
                     _show_error(f'Apple QA Error:\n{str(e)[:300]}')
+                continue
+
+            # ── QA SUMMARY ────────────────────────────────────────────────
+            if event == 'QA SUMMARY':
+                _safe_close(window)
+                try:
+                    from AppleQASummary import AppleQASummary
+                    AppleQASummary()
+                except Exception as e:
+                    _show_error(f'QA Summary Error:\n{str(e)[:300]}')
                 continue
 
             _safe_close(window)
