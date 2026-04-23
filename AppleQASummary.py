@@ -240,42 +240,88 @@ def AppleQASummary():
         pair = stat_rows[i:i+2]
         stat_layout.append(pair)
 
-    layout = [
-        [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
-        [sg.Text(f'Block: {selected_block}   |   Date: {selected_date}', font=HEADER_FONT)],
-        [sg.Text(f'Total Checks: {total_checks}   |   Total Fruit Inspected: {int(total_fruit)}', font=BTN_FONT)],
-        [sg.HorizontalSeparator()],
-        [sg.Text('OVERALL DEFECT RATES (colour-coded)', font=BTN_FONT)],
-        *stat_layout,
-        [sg.Text('● GREEN ≤ lower limit   ● YELLOW = watch   ● RED = report', font=("Sans", 11, "bold"))],
-        [sg.HorizontalSeparator()],
-        [sg.Text('PER-WORKER BREAKDOWN (full day – all blocks)', font=BTN_FONT)],
-        [sg.Table(
-            values=table_rows,
-            headings=headings,
-            font=TABLE_FONT,
-            auto_size_columns=True,
-            num_rows=min(len(table_rows) + 1, 15),
-            justification='center',
-            key='-WORKER_TABLE-',
-            row_colors=[(len(table_rows) - 1, 'darkslategray', 'white')],  # highlight total row
-        )],
-        [sg.Button('BACK TO BLOCKS', **btn_kwargs),
-         sg.Button('CHANGE DATE',   **btn_kwargs),
-         sg.Button('QUIT',          **back_kwargs)],
-    ]
-    win = _centred_window(layout, title=f'QA Summary – {selected_block} – {selected_date}')
-    ev, _ = win.read()
-    win.close()
+    # ── Detail rows for the "View Checks" screen ──────────────────────────
+    detail_headings = ['Timestamp', 'Worker', 'Check ID', 'Fruit'] + [DEFECT_LABELS[c] for c in DEFECT_COLS]
+    detail_rows = []
+    for _, r in block_df.sort_values('TimeStamp').iterrows():
+        row = [r['TimeStamp'], r['Worker'], r['CheckID'], int(r['FruitChecked'])]
+        for col in DEFECT_COLS:
+            row.append(int(r[col]))
+        detail_rows.append(row)
+
+    while True:
+        layout = [
+            [sg.Text('Apple QA Daily Summary', font=TITLE_FONT)],
+            [sg.Text(f'Block: {selected_block}   |   Date: {selected_date}', font=HEADER_FONT)],
+            [sg.Text(f'Total Checks: {total_checks}   |   Total Fruit Inspected: {int(total_fruit)}', font=BTN_FONT)],
+            [sg.HorizontalSeparator()],
+            [sg.Text('OVERALL DEFECT RATES (colour-coded)', font=BTN_FONT)],
+            *stat_layout,
+            [sg.Text('● GREEN ≤ lower limit   ● YELLOW = watch   ● RED = report', font=("Sans", 11, "bold"))],
+            [sg.HorizontalSeparator()],
+            [sg.Text('PER-WORKER BREAKDOWN (full day – all blocks)', font=BTN_FONT)],
+            [sg.Table(
+                values=table_rows,
+                headings=headings,
+                font=TABLE_FONT,
+                auto_size_columns=True,
+                num_rows=min(len(table_rows) + 1, 15),
+                justification='center',
+                key='-WORKER_TABLE-',
+                row_colors=[(len(table_rows) - 1, 'darkslategray', 'white')],
+            )],
+            [sg.Button('VIEW CHECKS DETAIL', **btn_kwargs),
+             sg.Button('BACK TO BLOCKS',     **btn_kwargs),
+             sg.Button('CHANGE DATE',        **btn_kwargs),
+             sg.Button('QUIT',               **back_kwargs)],
+        ]
+        win = _centred_window(layout, title=f'QA Summary – {selected_block} – {selected_date}')
+        ev, _ = win.read()
+        win.close()
+
+        if ev == 'VIEW CHECKS DETAIL':
+            _show_checks_detail(detail_rows, detail_headings, selected_block, selected_date)
+        elif ev == 'BACK TO BLOCKS':
+            conn.close()
+            AppleQASummary()
+            return
+        elif ev == 'CHANGE DATE':
+            conn.close()
+            AppleQASummary()
+            return
+        else:
+            break
 
     conn.close()
 
-    # Allow navigation
-    if ev == 'BACK TO BLOCKS':
-        AppleQASummary.__wrapped__ = True  # sentinel to avoid recursion depth issues
-        AppleQASummary()
-    elif ev == 'CHANGE DATE':
-        AppleQASummary()
+
+def _show_checks_detail(detail_rows, headings, block, date):
+    """Show a scrollable table of every individual check with timestamps."""
+    layout = [
+        [sg.Text('Individual Checks Detail', font=TITLE_FONT)],
+        [sg.Text(f'Block: {block}   |   Date: {date}', font=HEADER_FONT)],
+        [sg.Text(f'{len(detail_rows)} check(s) recorded', font=BTN_FONT)],
+        [sg.HorizontalSeparator()],
+        [sg.Table(
+            values=detail_rows,
+            headings=headings,
+            font=TABLE_FONT,
+            auto_size_columns=True,
+            num_rows=min(len(detail_rows), 20),
+            justification='center',
+            key='-DETAIL_TABLE-',
+            expand_x=True,
+            expand_y=True,
+        )],
+        [sg.Button('CLOSE', font=BTN_FONT, size=(12, 1), pad=BTN_PAD,
+                   button_color=('white', 'firebrick3'), border_width=2)],
+    ]
+    win = _centred_window(layout, title=f'Checks Detail – {block} – {date}')
+    while True:
+        ev, _ = win.read()
+        if ev in (sg.WIN_CLOSED, 'CLOSE'):
+            break
+    win.close()
 
 
 if __name__ == '__main__':
