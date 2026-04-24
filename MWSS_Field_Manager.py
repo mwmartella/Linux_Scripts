@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 import sqlite3
+import requests
 import pandas as pd
 import FreeSimpleGUI as sg
 import datetime
@@ -152,7 +153,34 @@ while MasterSignal < 1:
             sg.popup('Sync timed out after 5 minutes.',
                      title='Sync Timeout', font=BTN_FONT, keep_on_top=True)
         elif proc.returncode == 0:
-            sg.popup('✔  OneDrive sync completed successfully!',
+            # Sync workers from API into local sr1.db
+            _worker_sync_msg = '✔  OneDrive sync completed successfully!'
+            try:
+                _resp = requests.get('http://192.168.1.9:8000/workers', timeout=10)
+                _resp.raise_for_status()
+                _all_workers = _resp.json()
+                _active_workers = [w for w in _all_workers if w.get('end_date') is None]
+                _sr1_db_path = '/home/sr1/Documents/sr1.db'
+                _sr1_engine = create_engine(f'sqlite:///{_sr1_db_path}')
+                _sr1_conn_raw = sqlite3.connect(_sr1_db_path)
+                _sr1_cursor = _sr1_conn_raw.cursor()
+                _sr1_cursor.execute('DROP TABLE IF EXISTS workers')
+                _sr1_cursor.execute('''CREATE TABLE workers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    first_name TEXT,
+                    last_name TEXT
+                )''')
+                for _w in _active_workers:
+                    _sr1_cursor.execute(
+                        'INSERT INTO workers (first_name, last_name) VALUES (?, ?)',
+                        (_w.get('first_name', ''), _w.get('last_name', ''))
+                    )
+                _sr1_conn_raw.commit()
+                _sr1_conn_raw.close()
+                _worker_sync_msg += f'\n✔  Worker list updated ({len(_active_workers)} active workers synced).'
+            except Exception as _e:
+                _worker_sync_msg += f'\n⚠  Worker list sync failed: {_e}'
+            sg.popup(_worker_sync_msg,
                      title='Sync Complete', font=BTN_FONT, keep_on_top=True)
         else:
             # Grab any remaining stderr

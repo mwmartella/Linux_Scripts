@@ -16,6 +16,7 @@ import textwrap
 import platform
 from pathlib import Path
 from touch_helpers import make_touch_combo_row, handle_touch_combos
+from sqlalchemy import create_engine, text as sa_text
 
 sg.theme('DarkBlue3')
 TITLE_FONT = ("Sans", 20, "bold")
@@ -62,7 +63,17 @@ def TimeLog():
     #BlockList = ["S-SHED PL", "S-SHED SD", "S-SHED Gala", "Pink Belle", "STK GS", "STK LIR", "Rob Bravo", "Cherry Bravo", "GSPL GS", "GSPL PL", "Total PL", "Modi", "Rainier", "Van", "Lapin", "Chelan", "Merchant", "DWF PL", "DWF GS", "LIR18", "LIR19", "BGGS - Bravo", "BGGS - GS", "BGGS - Gala", "WPL - PL", "WPL - GS"]
     #BlockDict = {"B2": "S-SHED PL", "B3": "S-SHED SD", "B4": "S-SHED Gala", "C2": "Pink Belle", "D3": "STK GS", "D4": "STK LIR", "E1": "Rob Bravo", "F1": "Cherry Bravo", "H2": "GSPL GS", "H3": "GSPL PL", "I1": "Total PL", "J1": "Modi", "N2": "Rainier", "N3": "Van", "N5": "Lapin", "N6": "Chelan", "N7": "Merchant", "Q1": "DWF PL", "Q2": "DWF GS", "R1": "LIR18", "S1": "LIR19", "WC2": "BGGS - Bravo", "WC3": "BGGS - GS", "WC4": "BGGS - Gala", "WD2": "WPL - PL", "WD3": "WPL - GS"}
     WorkerClass = 0
-    CasualStaffList = CasualDataFrame['Worker Name'].tolist()
+    # Load active worker list from local sr1.db instead of Excel
+    _sr1_db_path = '/home/sr1/Documents/sr1.db'
+    try:
+        _sr1_engine = create_engine(f'sqlite:///{_sr1_db_path}')
+        with _sr1_engine.connect() as _sr1_conn:
+            _workers_result = _sr1_conn.execute(sa_text('SELECT first_name, last_name FROM workers'))
+            CasualStaffList = [f"{r[0]} {r[1]}" for r in _workers_result.fetchall()]
+        if not CasualStaffList:
+            CasualStaffList = CasualDataFrame['Worker Name'].tolist()
+    except Exception:
+        CasualStaffList = CasualDataFrame['Worker Name'].tolist()
     Disclaimer1 = """FIT FOR WORK - For my own safety and the safety of others, I agree to present fit for work, not under the influence of alcohol or illicit or illegal drugs. I will not consume/use alcohol, illicit or illegal drugs whilst at work. If I am using prescription or over the counter medication that I have been advised by my GP/Chemist, or it is noted on the medication packaging "not to operate machinery or potential to cause effect to operating impairment/ judgement" or in Safety Sensitive Roles and Positions or if I am in any doubt, I will inform my Supervisor immediately."""
     Disclaimer2 = """FATIGUE - I agree to notify my Supervisor immediately if I am or believe that I am suffering fatigue through Lack of sleep, Illness, Personal Issues or other reasons."""
     Disclaimer3 = """SWMS - I have access to and have read and understand the task specific section in the Safe Work Method Statement (SWMS) for the job/s that I will be undertaking and I agree to work within these guidelines. If I am unable to work within these guidelines, I will contact my Supervisor immediately for instructions."""
