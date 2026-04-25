@@ -156,7 +156,7 @@ while MasterSignal < 1:
             # Sync workers from API into local sr1.db
             _worker_sync_msg = '✔  OneDrive sync completed successfully!'
             try:
-                _resp = requests.get('http://192.168.1.9:8000/workers', timeout=10)
+                _resp = requests.get('http://192.168.1.15:8000/workers', timeout=10)
                 _resp.raise_for_status()
                 _all_workers = _resp.json()
                 _active_workers = [w for w in _all_workers if w.get('end_date') is None]
