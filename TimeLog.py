@@ -207,6 +207,45 @@ def TimeLog():
         if event == 'Back':
             window.close()
 
+    def run_role_call():
+        """Run role call for all casual staff not signed in and not already recorded today."""
+        CurrentWorkingCasualQuery = cursor.execute("""SELECT WorkerName, SUM(Signal) FROM WorkerTimeLog WHERE WorkerCode = 'C2' OR WorkerCode = 'C3' GROUP BY WorkerName;""")
+        CurrentWorkingCasualDataFrame = pd.DataFrame(CurrentWorkingCasualQuery, columns=['Name', 'Signal'])
+        CurrentWorkingCasualDataFrame = CurrentWorkingCasualDataFrame.drop(CurrentWorkingCasualDataFrame[CurrentWorkingCasualDataFrame.Signal == 0].index)
+        print(CurrentWorkingCasualDataFrame)
+        CurrentWorkerList = CurrentWorkingCasualDataFrame['Name'].tolist()
+        today_str = datetime.date.today().strftime('%Y-%m-%d')
+        try:
+            already_recorded_query = cursor.execute(
+                """SELECT Worker FROM WorkerOff WHERE TimeStamp LIKE ?""",
+                (today_str + '%',)
+            )
+            already_recorded = [row[0] for row in already_recorded_query.fetchall()]
+        except Exception:
+            already_recorded = []
+        for StaffMemeber in CasualStaffList:
+            if StaffMemeber not in CurrentWorkerList and StaffMemeber not in already_recorded:
+                layoutA = [ [sg.Text(StaffMemeber + ' Not Signed In', font=HEADER_FONT)],
+                            [sg.Text('Please Select Reason', font=BODY_FONT)],
+                            make_touch_combo_row('Select Reason', 'Name'),
+                            [sg.Button('Ok', **btn_kwargs)],
+                            [sg.Button('Back', **back_kwargs)]]
+                _combos_reason = {'Name': ('Select Reason', WorkerReasonList)}
+                rc_window = _make_window(layoutA, 'Role Call')
+                while True:
+                    rc_event, rc_values = rc_window.read()
+                    if handle_touch_combos(rc_event, rc_window, _combos_reason):
+                        continue
+                    break
+                if rc_event == 'Ok':
+                    rc_window.close()
+                    TimeStamp = datetime.datetime.now()
+                    DataList = [TimeStamp, StaffMemeber, rc_values['Name']]
+                    cursor.execute("""INSERT INTO WorkerOff (TimeStamp, Worker, Reason) VALUES ('%s', '%s', '%s')""" % (DataList[0], DataList[1], DataList[2]))
+                    sql_connect.commit()
+                if rc_event == 'Back':
+                    rc_window.close()
+
     #Open First Window
     Signal = 0
     while Signal < 1:
@@ -402,44 +441,6 @@ def TimeLog():
             if event2 == 'Back':
                 window.close()
 
-        def run_role_call():
-            """Run role call for all casual staff not signed in and not already recorded today."""
-            CurrentWorkingCasualQuery = cursor.execute("""SELECT WorkerName, SUM(Signal) FROM WorkerTimeLog WHERE WorkerCode = 'C2' OR WorkerCode = 'C3' GROUP BY WorkerName;""")
-            CurrentWorkingCasualDataFrame = pd.DataFrame(CurrentWorkingCasualQuery, columns=['Name', 'Signal'])
-            CurrentWorkingCasualDataFrame = CurrentWorkingCasualDataFrame.drop(CurrentWorkingCasualDataFrame[CurrentWorkingCasualDataFrame.Signal == 0].index)
-            print(CurrentWorkingCasualDataFrame)
-            CurrentWorkerList = CurrentWorkingCasualDataFrame['Name'].tolist()
-            today_str = datetime.date.today().strftime('%Y-%m-%d')
-            try:
-                already_recorded_query = cursor.execute(
-                    """SELECT Worker FROM WorkerOff WHERE TimeStamp LIKE ?""",
-                    (today_str + '%',)
-                )
-                already_recorded = [row[0] for row in already_recorded_query.fetchall()]
-            except Exception:
-                already_recorded = []
-            for StaffMemeber in CasualStaffList:
-                if StaffMemeber not in CurrentWorkerList and StaffMemeber not in already_recorded:
-                    layoutA = [ [sg.Text(StaffMemeber + ' Not Signed In', font=HEADER_FONT)],
-                                [sg.Text('Please Select Reason', font=BODY_FONT)],
-                                make_touch_combo_row('Select Reason', 'Name'),
-                                [sg.Button('Ok', **btn_kwargs)],
-                                [sg.Button('Back', **back_kwargs)]]
-                    _combos_reason = {'Name': ('Select Reason', WorkerReasonList)}
-                    rc_window = _make_window(layoutA, 'Role Call')
-                    while True:
-                        rc_event, rc_values = rc_window.read()
-                        if handle_touch_combos(rc_event, rc_window, _combos_reason):
-                            continue
-                        break
-                    if rc_event == 'Ok':
-                        rc_window.close()
-                        TimeStamp = datetime.datetime.now()
-                        DataList = [TimeStamp, StaffMemeber, rc_values['Name']]
-                        cursor.execute("""INSERT INTO WorkerOff (TimeStamp, Worker, Reason) VALUES ('%s', '%s', '%s')""" % (DataList[0], DataList[1], DataList[2]))
-                        sql_connect.commit()
-                    if rc_event == 'Back':
-                        rc_window.close()
 
         if event == 'Role Call':
             run_role_call()
